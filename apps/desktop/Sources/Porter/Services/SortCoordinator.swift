@@ -83,6 +83,10 @@ final class SortCoordinator {
     private var isSweeping = false
     private var resweepQueued = false
     private var sortedRevertTask: Task<Void, Never>?
+    /// Standardized paths of files the user pulled back with "Undo" — skipped by the
+    /// next sweeps so they aren't immediately re-sorted. Pruned of vanished paths
+    /// each sweep (once the user moves the file away it drops out naturally).
+    private var ignoredPaths: Set<String> = []
 
     private static let activityCap = 100
 
@@ -199,16 +203,20 @@ final class SortCoordinator {
         isSweeping = true
         status = .syncing
         progress = nil
+        // Drop ignore entries whose file is gone (user dealt with it) so the set
+        // doesn't grow unbounded.
+        ignoredPaths = ignoredPaths.filter { FileManager.default.fileExists(atPath: $0) }
         let sources = settings.sources
         let rules = settings.rules
         let nasRoot = settings.nasURL
         let settle = settings.settleSeconds
+        let ignoring = ignoredPaths
         // Capture self strongly: it's a @MainActor (Sendable) object and the task is
         // short-lived, so there's no cycle and the @Sendable progress callback can
         // hop back to the main actor to publish progress.
         let coordinator = self
         let summary = await Task.detached(priority: .utility) {
-            Sorter(sources: sources, rules: rules, nasRoot: nasRoot, settleSeconds: settle).sweep { completed, total in
+            Sorter(sources: sources, rules: rules, nasRoot: nasRoot, settleSeconds: settle).sweep(ignoring: ignoring) { completed, total in
                 Task { @MainActor in
                     coordinator.progress = total > 0 ? SortProgress(completed: completed, total: total) : nil
                 }
@@ -272,6 +280,41 @@ final class SortCoordinator {
             try? await Task.sleep(nanoseconds: 2_500_000_000)
             guard !Task.isCancelled, let self else { return }
             if case .sorted = self.status { self.status = .idle }
+        }
+    }
+
+    // MARK: - Undo
+
+    /// Move a sorted file back to the folder it came from. Best-effort: uses the
+    /// same xattr-stripping copy as the forward move (so the trip back over SMB
+    /// also succeeds). The restored file is added to `ignoredPaths` so the next
+    /// sweep doesn't just re-file it. Marks the activity row as undone on success.
+    func undo(_ entry: ActivityEntry) {
+        guard entry.canUndo,
+              let finalPath = entry.finalPath,
+              let sourcePath = entry.sourcePath else { return }
+        let from = URL(fileURLWithPath: finalPath)
+        let destDir = URL(fileURLWithPath: sourcePath).deletingLastPathComponent()
+        guard FileManager.default.fileExists(atPath: finalPath) else {
+            log.error("undo: \(entry.fileName) is no longer at \(finalPath)")
+            return
+        }
+        let nasRoot = settings.nasURL
+        Task {
+            let restored: URL? = await Task.detached(priority: .userInitiated) {
+                try? Mover(nasRoot: nasRoot).move(from, intoDirectory: destDir)
+            }.value
+            guard let restored else {
+                status = .error("Couldn't move \(entry.fileName) back")
+                log.error("undo failed for \(entry.fileName)")
+                return
+            }
+            ignoredPaths.insert(restored.standardizedFileURL.path)
+            if let idx = activity.firstIndex(where: { $0.id == entry.id }) {
+                activity[idx].undone = true
+            }
+            if totalMoved > 0 { totalMoved -= 1 }
+            log.info("undo: moved \(entry.fileName) back to \(destDir.lastPathComponent)/")
         }
     }
 

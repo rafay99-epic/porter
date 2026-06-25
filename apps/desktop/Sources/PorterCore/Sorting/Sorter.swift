@@ -41,7 +41,11 @@ public struct Sorter: Sendable {
     /// `completed == 0` (so a determinate bar can show the total immediately), then
     /// after each file moves — so the UI can show real progress. The callback is
     /// `@Sendable` because the sweep runs off the main actor.
+    /// `ignoring` is a set of standardized file paths the caller wants left alone —
+    /// used by "Undo" so a file the user just pulled back isn't re-sorted on the
+    /// very next sweep. These are skipped silently (not counted, not logged).
     public func sweep(now: Date = Date(),
+                      ignoring: Set<String> = [],
                       onProgress: (@Sendable (Int, Int) -> Void)? = nil) -> SweepSummary {
         var summary = SweepSummary()
         let fm = FileManager.default
@@ -70,6 +74,7 @@ public struct Sorter: Sendable {
             for url in contents {
                 let name = url.lastPathComponent
                 if FileTriage.isMacOSJunk(name) { continue }   // not counted, not logged
+                if ignoring.contains(url.standardizedFileURL.path) { continue }   // pulled back by Undo
                 let values = try? url.resourceValues(forKeys: [.isDirectoryKey, .contentModificationDateKey])
                 if values?.isDirectory == true { summary.skipped += 1; continue }
                 if FileTriage.isPartialOrHidden(name) { summary.skipped += 1; continue }
@@ -91,17 +96,20 @@ public struct Sorter: Sendable {
                 summary.moved += 1
                 summary.entries.append(ActivityEntry(
                     date: now, fileName: item.name, destination: item.destination,
-                    outcome: .moved(folder: dest.deletingLastPathComponent().lastPathComponent)))
+                    outcome: .moved(folder: dest.deletingLastPathComponent().lastPathComponent),
+                    sourcePath: item.url.path, finalPath: dest.path))
             } catch let Mover.MoveError.sourceNotRemoved(destination) {
                 summary.failed += 1
                 summary.entries.append(ActivityEntry(
                     date: now, fileName: item.name, destination: item.destination,
-                    outcome: .failed(reason: "copied to \(destination.lastPathComponent) but couldn't remove original")))
+                    outcome: .failed(reason: "copied to \(destination.lastPathComponent) but couldn't remove original"),
+                    sourcePath: item.url.path))
             } catch {
                 summary.failed += 1
                 summary.entries.append(ActivityEntry(
                     date: now, fileName: item.name, destination: item.destination,
-                    outcome: .failed(reason: describe(error))))
+                    outcome: .failed(reason: describe(error)),
+                    sourcePath: item.url.path))
                 // If the move failed because the NAS vanished mid-sweep, stop —
                 // the coordinator will pause and retry when it's back.
                 if !MountCheck.isMounted(mover.nasRoot) {

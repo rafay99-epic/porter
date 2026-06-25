@@ -26,7 +26,7 @@ struct MenuContent: View {
                 updateCallout(release)
             }
 
-            ActivityListView(entries: coordinator.activity)
+            ActivityListView(entries: coordinator.activity, onUndo: { coordinator.undo($0) })
 
             Divider()
             footer

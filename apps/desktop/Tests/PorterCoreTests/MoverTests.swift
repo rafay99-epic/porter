@@ -72,6 +72,32 @@ final class MoverTests: XCTestCase {
         XCTAssertEqual(docDirs.count, 1, "must reuse the existing folder, not create a duplicate case-variant")
     }
 
+    func testMoveIntoDirectoryRoundTripsForUndo() throws {
+        // Forward: Downloads → NAS/PDFs. Then undo: NAS/PDFs → back into Downloads.
+        let file = try makeFile("paper.pdf", contents: "abc")
+        let mover = Mover(nasRoot: nas)
+        let onNAS = try mover.move(file, to: "PDFs")
+        XCTAssertFalse(FileManager.default.fileExists(atPath: file.path))
+
+        let restored = try mover.move(onNAS, intoDirectory: source)
+        XCTAssertEqual(restored.deletingLastPathComponent().path, source.path)
+        XCTAssertEqual(try String(contentsOf: restored, encoding: .utf8), "abc")
+        XCTAssertFalse(FileManager.default.fileExists(atPath: onNAS.path), "NAS copy removed after undo")
+    }
+
+    func testSweepIgnoresPulledBackPaths() throws {
+        let kept = try makeFile("keep.pdf")
+        _ = try makeFile("sortme.pdf")
+        let src = WatchSource(path: source.path, routing: .classify)
+        let sorter = Sorter(sources: [src], rules: SortRule.defaults, nasRoot: nas, settleSeconds: 0)
+        let summary = sorter.sweep(now: Date().addingTimeInterval(60),
+                                   ignoring: [kept.standardizedFileURL.path])
+
+        XCTAssertEqual(summary.moved, 1, "the ignored file must stay put")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: kept.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: nas.appendingPathComponent("PDFs/sortme.pdf").path))
+    }
+
     func testSweepEndToEndClassify() throws {
         _ = try makeFile("a.png")
         _ = try makeFile("b.pdf")

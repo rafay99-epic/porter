@@ -39,7 +39,8 @@ struct DashboardView: View {
             }
             .padding(.horizontal, 24).padding(.vertical, 10)
 
-            ActivityListView(entries: coordinator.activity, maxHeight: .infinity)
+            ActivityListView(entries: coordinator.activity, maxHeight: .infinity,
+                             onUndo: { coordinator.undo($0) })
 
             Divider()
             footer

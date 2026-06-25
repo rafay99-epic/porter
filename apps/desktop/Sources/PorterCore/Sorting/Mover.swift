@@ -36,6 +36,15 @@ public struct Mover: Sendable {
     @discardableResult
     public func move(_ source: URL, to destination: String) throws -> URL {
         let destDir = resolveDestinationDirectory(destination)
+        return try move(source, intoDirectory: destDir)
+    }
+
+    /// Move `source` into an already-resolved directory `destDir` using the same
+    /// xattr-stripping copy + atomic rename + unlink mechanics. Used both for the
+    /// forward sort (destDir under the NAS) and for "Undo" (destDir back in the
+    /// original watched folder). Creates `destDir` if absent.
+    @discardableResult
+    public func move(_ source: URL, intoDirectory destDir: URL) throws -> URL {
         do {
             try FileManager.default.createDirectory(at: destDir, withIntermediateDirectories: true)
         } catch {

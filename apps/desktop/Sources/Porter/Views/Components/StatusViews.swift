@@ -111,6 +111,8 @@ struct StatusHeaderView: View {
 struct ActivityListView: View {
     let entries: [ActivityEntry]
     var maxHeight: CGFloat = 260
+    /// When set, a moved row shows a "move back" button that calls this.
+    var onUndo: ((ActivityEntry) -> Void)?
 
     var body: some View {
         if entries.isEmpty {
@@ -130,7 +132,7 @@ struct ActivityListView: View {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
                     ForEach(entries) { entry in
-                        ActivityRow(entry: entry)
+                        ActivityRow(entry: entry, onUndo: onUndo)
                         if entry.id != entries.last?.id { Divider() }
                     }
                 }
@@ -144,6 +146,8 @@ struct ActivityListView: View {
 /// (reason, in red).
 struct ActivityRow: View {
     let entry: ActivityEntry
+    var onUndo: ((ActivityEntry) -> Void)?
+    @State private var hovering = false
 
     var body: some View {
         HStack(spacing: 8) {
@@ -155,15 +159,27 @@ struct ActivityRow: View {
                     .font(.callout)
                     .lineLimit(1)
                     .truncationMode(.middle)
+                    .strikethrough(entry.undone, color: .secondary)
                 Text(detail)
                     .font(.caption2)
                     .foregroundStyle(entry.isFailure ? .red : .secondary)
                     .lineLimit(1)
             }
             Spacer()
+            if entry.undone {
+                Text("Moved back").font(.caption2).foregroundStyle(.tertiary)
+            } else if let onUndo, entry.canUndo {
+                Button("Move Back") { onUndo(entry) }
+                    .buttonStyle(.borderless)
+                    .font(.caption2)
+                    .opacity(hovering ? 1 : 0)
+                    .help("Move this file back to where it came from")
+            }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
+        .contentShape(Rectangle())
+        .onHover { hovering = $0 }
     }
 
     private var iconName: String {
@@ -173,7 +189,7 @@ struct ActivityRow: View {
 
     private var detail: String {
         switch entry.outcome {
-        case .moved(let folder): return "→ \(folder)"
+        case .moved(let folder): return entry.undone ? "moved back from \(folder)" : "→ \(folder)"
         case .failed(let reason): return reason
         }
     }
