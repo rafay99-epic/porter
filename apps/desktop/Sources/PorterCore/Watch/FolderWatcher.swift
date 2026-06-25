@@ -11,19 +11,21 @@ import CoreServices
 /// app in the full Aqua GUI session), never a launchd agent — so the moves the
 /// callback ultimately triggers can write to the Finder-mounted SMB share.
 public final class FolderWatcher {
-    private let folder: URL
+    private let folders: [URL]
     private let queue: DispatchQueue
     private let onPaths: ([String]) -> Void
     private var stream: FSEventStreamRef?
 
-    public init(folder: URL, queue: DispatchQueue, onPaths: @escaping ([String]) -> Void) {
-        self.folder = folder
+    /// Watch one or more folders with a single FSEvents stream (the stream accepts
+    /// an array of paths). Empty `folders` is a no-op.
+    public init(folders: [URL], queue: DispatchQueue, onPaths: @escaping ([String]) -> Void) {
+        self.folders = folders
         self.queue = queue
         self.onPaths = onPaths
     }
 
     public func start() {
-        guard stream == nil else { return }
+        guard stream == nil, !folders.isEmpty else { return }
         let callback: FSEventStreamCallback = { _, info, count, pathsPtr, _, _ in
             guard let info else { return }
             let watcher = Unmanaged<FolderWatcher>.fromOpaque(info).takeUnretainedValue()
@@ -39,7 +41,7 @@ public final class FolderWatcher {
                            | kFSEventStreamCreateFlagNoDefer)
         guard let stream = FSEventStreamCreate(
             kCFAllocatorDefault, callback, &context,
-            [folder.path] as CFArray,
+            folders.map(\.path) as CFArray,
             FSEventStreamEventId(kFSEventStreamEventIdSinceNow),
             1.0,                         // coalesce bursts over 1s
             flags) else { return }

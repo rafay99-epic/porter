@@ -32,7 +32,7 @@ final class MoverTests: XCTestCase {
     func testMovePlacesFileAndRemovesSource() throws {
         let file = try makeFile("report.pdf", contents: "pdf-bytes")
         let mover = Mover(nasRoot: nas)
-        let dest = try mover.move(file, to: .pdfs)
+        let dest = try mover.move(file, to: "PDFs")
 
         XCTAssertEqual(dest.deletingLastPathComponent().lastPathComponent, "PDFs")
         XCTAssertEqual(try String(contentsOf: dest, encoding: .utf8), "pdf-bytes")
@@ -47,7 +47,7 @@ final class MoverTests: XCTestCase {
 
         let file = try makeFile("notes.txt", contents: "new")
         let mover = Mover(nasRoot: nas)
-        let dest = try mover.move(file, to: .documents)
+        let dest = try mover.move(file, to: "Documents")
 
         XCTAssertEqual(dest.lastPathComponent, "notes (1).txt")
         XCTAssertEqual(try String(contentsOf: dest, encoding: .utf8), "new")
@@ -64,7 +64,7 @@ final class MoverTests: XCTestCase {
 
         let file = try makeFile("memo.md", contents: "memo-bytes")
         let mover = Mover(nasRoot: nas)
-        let dest = try mover.move(file, to: .documents)
+        let dest = try mover.move(file, to: "Documents")
 
         XCTAssertEqual(try String(contentsOf: dest, encoding: .utf8), "memo-bytes")
         let docDirs = try FileManager.default.contentsOfDirectory(atPath: nas.path)
@@ -72,22 +72,49 @@ final class MoverTests: XCTestCase {
         XCTAssertEqual(docDirs.count, 1, "must reuse the existing folder, not create a duplicate case-variant")
     }
 
-    func testSweepEndToEnd() throws {
+    func testSweepEndToEndClassify() throws {
         _ = try makeFile("a.png")
         _ = try makeFile("b.pdf")
         _ = try makeFile(".DS_Store")             // junk → ignored
         _ = try makeFile("c.mp4.crdownload")       // partial → skipped
 
-        // now is well past every file's mtime, so the settle check passes.
-        let sorter = Sorter(sources: [source], nasRoot: nas, settleSeconds: 0)
+        let src = WatchSource(path: source.path, routing: .classify)
+        let sorter = Sorter(sources: [src], rules: SortRule.defaults, nasRoot: nas, settleSeconds: 0)
         let summary = sorter.sweep(now: Date().addingTimeInterval(60))
 
         XCTAssertEqual(summary.moved, 2)
         XCTAssertEqual(summary.failed, 0)
         XCTAssertEqual(summary.skipped, 1) // the .crdownload; .DS_Store isn't counted
+        XCTAssertTrue(FileManager.default.fileExists(atPath: nas.appendingPathComponent("Pictures/a.png").path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: nas.appendingPathComponent("PDFs/b.pdf").path))
+    }
+
+    func testFixedRoutingSendsEverythingToOneFolder() throws {
+        _ = try makeFile("vacation.png")
+        _ = try makeFile("notes.txt")
+
+        // A "Pictures-style" source: force everything to one NAS folder.
+        let src = WatchSource(path: source.path, routing: .fixed(folder: "Photos"))
+        let sorter = Sorter(sources: [src], rules: SortRule.defaults, nasRoot: nas, settleSeconds: 0)
+        let summary = sorter.sweep(now: Date().addingTimeInterval(60))
+
+        XCTAssertEqual(summary.moved, 2)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: nas.appendingPathComponent("Photos/vacation.png").path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: nas.appendingPathComponent("Photos/notes.txt").path))
+    }
+
+    func testNestedDestinationCreated() throws {
+        _ = try makeFile("march invoice.pdf")
+        let rules = [
+            SortRule(match: .nameContains("invoice"), destination: "Documents/Invoices"),
+            SortRule(match: .anything, destination: "Other")
+        ]
+        let src = WatchSource(path: source.path, routing: .classify)
+        let sorter = Sorter(sources: [src], rules: rules, nasRoot: nas, settleSeconds: 0)
+        let summary = sorter.sweep(now: Date().addingTimeInterval(60))
+
+        XCTAssertEqual(summary.moved, 1)
         XCTAssertTrue(FileManager.default.fileExists(
-            atPath: nas.appendingPathComponent("Pictures/a.png").path))
-        XCTAssertTrue(FileManager.default.fileExists(
-            atPath: nas.appendingPathComponent("PDFs/b.pdf").path))
+            atPath: nas.appendingPathComponent("Documents/Invoices/march invoice.pdf").path))
     }
 }

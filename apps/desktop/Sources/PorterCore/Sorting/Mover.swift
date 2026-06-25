@@ -29,12 +29,13 @@ public struct Mover: Sendable {
         case sourceNotRemoved(destination: URL)
     }
 
-    /// Move `source` into `<nasRoot>/<category>/`, returning the final destination
-    /// URL. Creates the category folder if absent, resolving an existing
-    /// case-variant first (so `Documents` and `documents` don't both get made).
+    /// Move `source` into `<nasRoot>/<destination>/`, returning the final URL.
+    /// `destination` may be nested ("Documents/Invoices"). Creates the folder(s) if
+    /// absent, resolving existing case-variants component-by-component first (so
+    /// `Documents` and `documents` don't both get made).
     @discardableResult
-    public func move(_ source: URL, to category: FileCategory) throws -> URL {
-        let destDir = resolveCategoryDirectory(category)
+    public func move(_ source: URL, to destination: String) throws -> URL {
+        let destDir = resolveDestinationDirectory(destination)
         do {
             try FileManager.default.createDirectory(at: destDir, withIntermediateDirectories: true)
         } catch {
@@ -76,23 +77,37 @@ public struct Mover: Sendable {
 
     // MARK: - Path resolution
 
-    /// `find_dir_ci`: if `<nasRoot>/<folder>` exists in any case, return that exact
-    /// path; otherwise return the canonically-cased path (created on first move).
-    public func resolveCategoryDirectory(_ category: FileCategory) -> URL {
-        let target = nasRoot.appendingPathComponent(category.folderName, isDirectory: true)
-        if FileManager.default.fileExists(atPath: target.path) { return target }
-
-        let wanted = category.folderName.lowercased()
-        if let siblings = try? FileManager.default.contentsOfDirectory(
-            at: nasRoot, includingPropertiesForKeys: [.isDirectoryKey]) {
-            for url in siblings where url.lastPathComponent.lowercased() == wanted {
-                var isDir: ObjCBool = false
-                if FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir), isDir.boolValue {
-                    return url
-                }
+    /// Resolve a (possibly nested) destination folder under the NAS root, matching
+    /// existing case-variants at each path component so `documents/` isn't
+    /// duplicated as `Documents/`. Components that don't exist yet are used as-is
+    /// (and created on the move). Empty components are skipped.
+    public func resolveDestinationDirectory(_ folder: String) -> URL {
+        var current = nasRoot
+        for component in folder.split(separator: "/").map(String.init) where !component.isEmpty {
+            let target = current.appendingPathComponent(component, isDirectory: true)
+            if FileManager.default.fileExists(atPath: target.path) {
+                current = target
+            } else if let existing = caseInsensitiveChild(of: current, named: component) {
+                current = existing
+            } else {
+                current = target
             }
         }
-        return target
+        return current
+    }
+
+    /// A child directory of `dir` whose name matches `named` case-insensitively.
+    private func caseInsensitiveChild(of dir: URL, named: String) -> URL? {
+        let wanted = named.lowercased()
+        guard let kids = try? FileManager.default.contentsOfDirectory(
+            at: dir, includingPropertiesForKeys: [.isDirectoryKey]) else { return nil }
+        for url in kids where url.lastPathComponent.lowercased() == wanted {
+            var isDir: ObjCBool = false
+            if FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir), isDir.boolValue {
+                return url
+            }
+        }
+        return nil
     }
 
     /// Finder-style collision suffix: `name (1).ext`, `name (2).ext`, … so an

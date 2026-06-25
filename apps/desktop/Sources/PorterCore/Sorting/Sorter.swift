@@ -12,6 +12,9 @@ public struct SweepSummary: Sendable, Equatable {
     /// coordinator surfaces this as a "grant access" prompt rather than letting
     /// it hide.
     public var readDenied = false
+    /// True when the NAS appears to have unmounted mid-sweep (a move failed and the
+    /// mount table no longer shows the root). The coordinator pauses and retries.
+    public var nasLost = false
 
     public var didWork: Bool { moved > 0 || failed > 0 }
 }
@@ -22,12 +25,14 @@ public struct SweepSummary: Sendable, Equatable {
 /// driven from a test against temp directories. The caller (SortCoordinator) is
 /// responsible for only invoking it when the NAS is actually mounted.
 public struct Sorter: Sendable {
-    public let sources: [URL]
+    public let sources: [WatchSource]
+    public let rules: [SortRule]
     public let mover: Mover
     public let settleSeconds: TimeInterval
 
-    public init(sources: [URL], nasRoot: URL, settleSeconds: TimeInterval = 30) {
+    public init(sources: [WatchSource], rules: [SortRule], nasRoot: URL, settleSeconds: TimeInterval = 30) {
         self.sources = sources
+        self.rules = rules
         self.mover = Mover(nasRoot: nasRoot)
         self.settleSeconds = settleSeconds
     }
@@ -45,17 +50,18 @@ public struct Sorter: Sendable {
         // Skips (junk / partial / dir / unsettled) are counted here, so the
         // progress total reflects only real work.
         var eligible: [EligibleFile] = []
-        for source in sources {
+        for source in sources where source.enabled {
             let contents: [URL]
             do {
                 contents = try fm.contentsOfDirectory(
-                    at: source,
+                    at: source.url,
                     includingPropertiesForKeys: [.isDirectoryKey, .contentModificationDateKey],
                     options: [])
             } catch {
                 let nsError = error as NSError
-                if nsError.domain == NSCocoaErrorDomain || (error as? POSIXError)?.code == .EPERM
-                    || nsError.code == 257 /* NSFileReadNoPermissionError */ {
+                // 257 = no read permission (TCC) → surface as readDenied.
+                // 260 = no such file (source deleted/moved) → skip silently.
+                if nsError.code == 257 || (error as? POSIXError)?.code == .EPERM {
                     summary.readDenied = true
                 }
                 continue
@@ -71,7 +77,8 @@ public struct Sorter: Sendable {
                 if !FileTriage.isSettled(modified: modified, now: now, seconds: settleSeconds) {
                     summary.skipped += 1; continue
                 }
-                eligible.append(EligibleFile(url: url, name: name, category: Classifier.category(for: name)))
+                let destination = route(name, with: source.routing)
+                eligible.append(EligibleFile(url: url, name: name, destination: destination))
             }
         }
 
@@ -80,32 +87,46 @@ public struct Sorter: Sendable {
         onProgress?(0, total)
         for (index, item) in eligible.enumerated() {
             do {
-                let dest = try mover.move(item.url, to: item.category)
+                let dest = try mover.move(item.url, to: item.destination)
                 summary.moved += 1
                 summary.entries.append(ActivityEntry(
-                    date: now, fileName: item.name, category: item.category,
+                    date: now, fileName: item.name, destination: item.destination,
                     outcome: .moved(folder: dest.deletingLastPathComponent().lastPathComponent)))
             } catch let Mover.MoveError.sourceNotRemoved(destination) {
                 summary.failed += 1
                 summary.entries.append(ActivityEntry(
-                    date: now, fileName: item.name, category: item.category,
+                    date: now, fileName: item.name, destination: item.destination,
                     outcome: .failed(reason: "copied to \(destination.lastPathComponent) but couldn't remove original")))
             } catch {
                 summary.failed += 1
                 summary.entries.append(ActivityEntry(
-                    date: now, fileName: item.name, category: item.category,
+                    date: now, fileName: item.name, destination: item.destination,
                     outcome: .failed(reason: describe(error))))
+                // If the move failed because the NAS vanished mid-sweep, stop —
+                // the coordinator will pause and retry when it's back.
+                if !MountCheck.isMounted(mover.nasRoot) {
+                    summary.nasLost = true
+                    break
+                }
             }
             onProgress?(index + 1, total)
         }
         return summary
     }
 
+    /// Destination for `name` under this source's routing.
+    private func route(_ name: String, with routing: WatchSource.Routing) -> String {
+        switch routing {
+        case .fixed(let folder): return folder
+        case .classify:          return RuleEngine.destination(for: name, using: rules)
+        }
+    }
+
     /// One file that passed triage and is queued to move.
     private struct EligibleFile {
         let url: URL
         let name: String
-        let category: FileCategory
+        let destination: String
     }
 
     private func describe(_ error: Error) -> String {

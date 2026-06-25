@@ -145,7 +145,7 @@ struct ActivityRow: View {
 
     private var iconName: String {
         if entry.isFailure { return "exclamationmark.triangle" }
-        return entry.category?.symbolName ?? "doc"
+        return entry.destination.map { FileCategory.symbol(forFolder: $0) } ?? "doc"
     }
 
     private var detail: String {
