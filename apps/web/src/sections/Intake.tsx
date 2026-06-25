@@ -6,7 +6,14 @@ import { CopyCommand } from '../components/CopyCommand'
 import { Download, RotateCcw, ArrowDown } from 'lucide-react'
 
 // The six bins the intake belt sorts into, and the scattered files that land in them.
-const BIN_KEYS: CategoryKey[] = ['screenshots', 'pictures', 'pdfs', 'documents', 'installers', 'archives']
+const BIN_KEYS: CategoryKey[] = [
+  'screenshots',
+  'pictures',
+  'pdfs',
+  'documents',
+  'installers',
+  'archives',
+]
 const BINS = BIN_KEYS.map((k) => CATEGORIES.find((c) => c.key === k)!)
 
 const FILES: { name: string; bin: CategoryKey; ext: string }[] = [

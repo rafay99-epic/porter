@@ -85,7 +85,14 @@ interface ChapterHeadProps {
   className?: string
 }
 
-export function ChapterHead({ index, kicker, title, lede, dark = false, className = '' }: ChapterHeadProps) {
+export function ChapterHead({
+  index,
+  kicker,
+  title,
+  lede,
+  dark = false,
+  className = '',
+}: ChapterHeadProps) {
   return (
     <Reveal className={className}>
       <Kicker index={index}>{kicker}</Kicker>

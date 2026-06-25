@@ -18,7 +18,15 @@ function Toggle({ on }: { on: boolean }) {
   )
 }
 
-function Row({ label, children, last = false }: { label: string; children: ReactNode; last?: boolean }) {
+function Row({
+  label,
+  children,
+  last = false,
+}: {
+  label: string
+  children: ReactNode
+  last?: boolean
+}) {
   return (
     <>
       <div className="flex items-center justify-between px-3.5 py-2.5">
@@ -33,8 +41,12 @@ function Row({ label, children, last = false }: { label: string; children: React
 function Group({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div>
-      <div className="px-1 pb-1 text-[11px] font-semibold uppercase tracking-wide text-ink-3">{title}</div>
-      <div className="overflow-hidden rounded-[10px] border border-black/10 bg-white">{children}</div>
+      <div className="px-1 pb-1 text-[11px] font-semibold uppercase tracking-wide text-ink-3">
+        {title}
+      </div>
+      <div className="overflow-hidden rounded-[10px] border border-black/10 bg-white">
+        {children}
+      </div>
     </div>
   )
 }

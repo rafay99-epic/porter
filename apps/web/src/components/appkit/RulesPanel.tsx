@@ -4,7 +4,18 @@ import { DEFAULT_RULES, RULE_CONDITIONS, categoryByFolder } from '@porter/core'
 import { ArrowRight, GripVertical, Plus } from 'lucide-react'
 import { Glyph } from '../Glyph'
 
-const POLICY = ['Keep both', 'Keep both', 'Keep both', 'Keep newer', 'Overwrite', 'Keep both', 'Keep both', 'Keep both', 'Skip', 'Keep both']
+const POLICY = [
+  'Keep both',
+  'Keep both',
+  'Keep both',
+  'Keep newer',
+  'Overwrite',
+  'Keep both',
+  'Keep both',
+  'Keep both',
+  'Skip',
+  'Keep both',
+]
 
 export function RulesPanel({ className = '' }: { className?: string }) {
   return (

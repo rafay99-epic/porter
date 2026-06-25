@@ -66,7 +66,9 @@ export function Colophon() {
                   <li key={l.label}>
                     <a
                       href={l.href}
-                      {...('external' in l && l.external ? { target: '_blank', rel: 'noreferrer' } : {})}
+                      {...('external' in l && l.external
+                        ? { target: '_blank', rel: 'noreferrer' }
+                        : {})}
                       className="text-[14px] text-ink-2 transition hover:text-blue"
                     >
                       {l.label}

@@ -45,12 +45,22 @@ export default {
       fontFamily: {
         display: ['"Bricolage Grotesque Variable"', 'Georgia', 'serif'],
         sans: [
-          '"Geist Variable"', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI',
-          'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif',
+          '"Geist Variable"',
+          '-apple-system',
+          'BlinkMacSystemFont',
+          'Segoe UI',
+          'Roboto',
+          'Helvetica Neue',
+          'Arial',
+          'sans-serif',
         ],
         mono: [
-          '"Geist Mono Variable"', '"SF Mono"', 'SFMono-Regular', 'ui-monospace',
-          'Menlo', 'monospace',
+          '"Geist Mono Variable"',
+          '"SF Mono"',
+          'SFMono-Regular',
+          'ui-monospace',
+          'Menlo',
+          'monospace',
         ],
         // The native windows specifically want the macOS system font.
         system: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Text"', 'Inter', 'sans-serif'],
@@ -60,8 +70,10 @@ export default {
         tighter: '-0.03em',
       },
       boxShadow: {
-        window: '0 1px 1px rgba(20,22,28,0.04), 0 18px 40px -12px rgba(20,22,28,0.22), 0 42px 90px -40px rgba(20,22,28,0.30)',
-        popover: '0 1px 0 rgba(255,255,255,0.6) inset, 0 10px 20px -8px rgba(20,22,28,0.20), 0 30px 60px -24px rgba(20,22,28,0.34)',
+        window:
+          '0 1px 1px rgba(20,22,28,0.04), 0 18px 40px -12px rgba(20,22,28,0.22), 0 42px 90px -40px rgba(20,22,28,0.30)',
+        popover:
+          '0 1px 0 rgba(255,255,255,0.6) inset, 0 10px 20px -8px rgba(20,22,28,0.20), 0 30px 60px -24px rgba(20,22,28,0.34)',
         lift: '0 1px 2px rgba(20,22,28,0.05), 0 10px 30px -14px rgba(20,22,28,0.20)',
         tag: '0 1px 2px rgba(20,22,28,0.06), 0 8px 18px -10px rgba(20,22,28,0.18)',
         bluey: '0 10px 40px -12px rgba(31,110,240,0.45)',

@@ -33,9 +33,9 @@ export function Destinations() {
           />
           <Reveal>
             <p className="max-w-xs text-[15px] leading-relaxed text-ink-2">
-              Classified by name first, then extension. Existing folders match
-              case-insensitively, so <span className="font-mono text-[13px]">documents/</span> is
-              never duplicated as <span className="font-mono text-[13px]">Documents/</span>.
+              Classified by name first, then extension. Existing folders match case-insensitively,
+              so <span className="font-mono text-[13px]">documents/</span> is never duplicated as{' '}
+              <span className="font-mono text-[13px]">Documents/</span>.
             </p>
           </Reveal>
         </div>
@@ -44,7 +44,7 @@ export function Destinations() {
         <div className="mt-14 border-t border-ink/15">
           {CATEGORIES.map((c, i) => (
             <Reveal key={c.key} delay={i * 0.04}>
-              <div className="group grid grid-cols-[auto_1fr_auto] items-center gap-4 border-b border-ink-line py-5 transition-colors hover:bg-card sm:grid-cols-[3rem_minmax(0,12rem)_1fr_auto] sm:gap-6 sm:px-3">
+              <div className="group grid grid-cols-1 gap-y-1 border-b border-ink-line py-5 transition-colors hover:bg-card sm:grid-cols-[3rem_auto_minmax(0,1fr)_auto] sm:items-center sm:gap-6 sm:px-3">
                 <span className="hidden font-mono text-[13px] tabular-nums text-ink-3 sm:block">
                   {String(i + 1).padStart(2, '0')}
                 </span>
@@ -55,11 +55,11 @@ export function Destinations() {
                   >
                     <Glyph icon={c.icon} size={18} />
                   </span>
-                  <span className="display text-[clamp(1.4rem,2.6vw,2.1rem)] tracking-tight text-ink">
+                  <span className="display whitespace-nowrap text-[clamp(1.4rem,2.6vw,2.1rem)] tracking-tight text-ink">
                     {c.folder}
                   </span>
                 </div>
-                <span className="col-span-2 truncate font-mono text-[12.5px] text-ink-3 sm:col-span-1 sm:text-right md:text-left">
+                <span className="truncate pl-12 font-mono text-[12.5px] text-ink-3 sm:pl-0 sm:text-right md:text-left">
                   {EXTS[c.key]}
                 </span>
                 <span className="hidden font-mono text-[12px] text-ink-3 sm:block">→ NAS</span>

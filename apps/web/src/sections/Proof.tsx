@@ -6,9 +6,17 @@ import { ScaleToFit } from '../components/ScaleToFit'
 import { ChapterHead, Reveal, CountUp } from '../components/editorial'
 
 const FIGURES = [
-  { to: STATS.totals.files, format: (v: number) => Math.round(v).toLocaleString(), label: 'files filed' },
+  {
+    to: STATS.totals.files,
+    format: (v: number) => Math.round(v).toLocaleString(),
+    label: 'files filed',
+  },
   { to: 47.2, format: (v: number) => `${v.toFixed(1)} GB`, label: 'space moved' },
-  { to: STATS.totals.categories, format: (v: number) => String(Math.round(v)), label: 'destinations' },
+  {
+    to: STATS.totals.categories,
+    format: (v: number) => String(Math.round(v)),
+    label: 'destinations',
+  },
 ]
 
 export function Proof() {
@@ -18,11 +26,7 @@ export function Proof() {
         <ChapterHead
           index="05"
           kicker="proof, not promises"
-          title={
-            <>
-              It keeps the receipts.
-            </>
-          }
+          title={<>It keeps the receipts.</>}
           lede="Every move is logged, counted, and charted across launches — so you can actually see the chaos it’s quietly absorbing."
         />
 

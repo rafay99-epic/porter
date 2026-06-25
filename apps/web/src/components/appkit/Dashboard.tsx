@@ -1,5 +1,11 @@
 // Recreation of DashboardView.swift — status hero, watching summary, activity log.
-import { type ActivityItem, type StatusKey, STATUS, categoryByFolder, WATCHED_FOLDERS } from '@porter/core'
+import {
+  type ActivityItem,
+  type StatusKey,
+  STATUS,
+  categoryByFolder,
+  WATCHED_FOLDERS,
+} from '@porter/core'
 import { Folder, HardDrive, Pause, Eye, BarChart3, Settings as SettingsIcon } from 'lucide-react'
 import { Glyph } from '../Glyph'
 

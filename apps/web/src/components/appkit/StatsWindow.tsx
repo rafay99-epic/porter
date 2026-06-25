@@ -41,7 +41,10 @@ export function StatsWindow({ className = '' }: { className?: string }) {
               <div
                 key={i}
                 className="flex-1 rounded-[2px] bg-blue-500"
-                style={{ height: `${Math.max(2, (v / maxDay) * 100)}%`, opacity: 0.5 + (v / maxDay) * 0.5 }}
+                style={{
+                  height: `${Math.max(2, (v / maxDay) * 100)}%`,
+                  opacity: 0.5 + (v / maxDay) * 0.5,
+                }}
               />
             ))}
           </div>

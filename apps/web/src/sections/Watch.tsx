@@ -57,7 +57,9 @@ export function Watch() {
                   <span className="font-mono text-[13px] tabular-nums text-blue">{f.n}</span>
                   <div>
                     <h3 className="text-[20px] font-semibold tracking-tight text-ink">{f.head}</h3>
-                    <p className="mt-1.5 max-w-md text-[15px] leading-relaxed text-ink-2">{f.body}</p>
+                    <p className="mt-1.5 max-w-md text-[15px] leading-relaxed text-ink-2">
+                      {f.body}
+                    </p>
                   </div>
                 </li>
               </Reveal>

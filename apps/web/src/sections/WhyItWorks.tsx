@@ -64,8 +64,8 @@ export function WhyItWorks() {
             <span className="text-night-ink">🟢 watching</span> ·{' '}
             <span className="text-night-ink">🔵 sorting</span> ·{' '}
             <span className="text-night-ink">🟠 NAS offline</span> ·{' '}
-            <span className="text-night-ink">🔴 needs access</span> — the menu-bar glyph is the whole
-            status surface. No more silent failures.
+            <span className="text-night-ink">🔴 needs access</span> — the menu-bar glyph is the
+            whole status surface. No more silent failures.
           </p>
         </Reveal>
       </div>

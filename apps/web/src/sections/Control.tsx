@@ -57,8 +57,8 @@ export function Control() {
             <p className="mt-8 max-w-md text-[15px] leading-relaxed text-ink-2">
               Match by extension, name, regex, size, age, or file kind — combine with{' '}
               <span className="font-medium text-ink">AND</span> /{' '}
-              <span className="font-medium text-ink">OR</span>, and choose how a name clash resolves,
-              per rule. Rules run in order; the first match wins.
+              <span className="font-medium text-ink">OR</span>, and choose how a name clash
+              resolves, per rule. Rules run in order; the first match wins.
             </p>
           </Reveal>
 

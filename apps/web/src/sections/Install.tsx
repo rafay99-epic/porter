@@ -6,9 +6,21 @@ import { PorterMark } from '../components/brand'
 import { ChapterHead, Reveal } from '../components/editorial'
 
 const STEPS = [
-  { Icon: TerminalSquare, head: 'Install it', body: 'One Homebrew command, or drag Porter.app from the DMG into Applications.' },
-  { Icon: ShieldCheck, head: 'Grant Full Disk Access', body: 'A one-time grant, tied to the signed app — it survives every update.' },
-  { Icon: FolderInput, head: 'Point it at your NAS', body: 'Mount your SMB share, pick the folders to watch, and Porter takes over.' },
+  {
+    Icon: TerminalSquare,
+    head: 'Install it',
+    body: 'One Homebrew command, or drag Porter.app from the DMG into Applications.',
+  },
+  {
+    Icon: ShieldCheck,
+    head: 'Grant Full Disk Access',
+    body: 'A one-time grant, tied to the signed app — it survives every update.',
+  },
+  {
+    Icon: FolderInput,
+    head: 'Point it at your NAS',
+    body: 'Mount your SMB share, pick the folders to watch, and Porter takes over.',
+  },
 ]
 
 export function Install() {
@@ -99,7 +111,8 @@ export function Install() {
                   href={INSTALL.dmgNightly}
                   className="inline-flex items-center gap-1.5 font-medium text-ink-2 transition hover:text-blue"
                 >
-                  <span className="h-2 w-2 rounded-full bg-warn" /> Nightly channel <ArrowUpRight size={14} />
+                  <span className="h-2 w-2 rounded-full bg-warn" /> Nightly channel{' '}
+                  <ArrowUpRight size={14} />
                 </a>
                 <a
                   href={INSTALL.releases}

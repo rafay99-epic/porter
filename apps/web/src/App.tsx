@@ -15,13 +15,27 @@ export default function App() {
     <>
       <MenuBar status={status} />
       <main>
-        <div data-status="idle"><Intake /></div>
-        <div data-status="idle"><Watch /></div>
-        <div data-status="syncing"><Destinations /></div>
-        <div data-status="idle"><WhyItWorks /></div>
-        <div data-status="syncing"><Control /></div>
-        <div data-status="sorted"><Proof /></div>
-        <div data-status="idle"><Install /></div>
+        <div data-status="idle">
+          <Intake />
+        </div>
+        <div data-status="idle">
+          <Watch />
+        </div>
+        <div data-status="syncing">
+          <Destinations />
+        </div>
+        <div data-status="idle">
+          <WhyItWorks />
+        </div>
+        <div data-status="syncing">
+          <Control />
+        </div>
+        <div data-status="sorted">
+          <Proof />
+        </div>
+        <div data-status="idle">
+          <Install />
+        </div>
       </main>
       <Colophon />
     </>

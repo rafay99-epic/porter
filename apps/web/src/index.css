@@ -104,7 +104,8 @@
   }
   /* Engineering-paper grid, very faint. */
   .bg-grid {
-    background-image: linear-gradient(rgba(20, 22, 28, 0.045) 1px, transparent 1px),
+    background-image:
+      linear-gradient(rgba(20, 22, 28, 0.045) 1px, transparent 1px),
       linear-gradient(90deg, rgba(20, 22, 28, 0.045) 1px, transparent 1px);
     background-size: 32px 32px;
   }

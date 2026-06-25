@@ -9,7 +9,7 @@ Geist (text), Geist Mono — self-hosted via Fontsource.
 
 ## Concept — "Order, on arrival"
 
-The site *performs the sort*. It opens on a scatter of real download files that
+The site _performs the sort_. It opens on a scatter of real download files that
 GSAP files into destination bins (the **Intake** hero), then walks one file's
 journey across editorial chapters:
 
