@@ -1,0 +1,13 @@
+# macOS
+.DS_Store
+
+# SwiftPM / build output
+apps/desktop/.build/
+apps/desktop/build/
+apps/desktop/Resources/AppIcon*.icns
+*.xcodeproj
+*.swiftpm
+
+# Editor
+.vscode/
+.idea/
