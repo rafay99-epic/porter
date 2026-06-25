@@ -75,6 +75,7 @@ final class SortCoordinator {
 
     private let log = AppInfo.logger("coordinator")
     private let notifier = Notifier()
+    private let statsStore = StatsStore(directory: Channel.current.statsDirectory)
     private let watcherQueue = DispatchQueue(label: "\(AppInfo.bundleIdentifier).watcher", qos: .utility)
     private var watcher: FolderWatcher?
     private var debounceTask: Task<Void, Never>?
@@ -268,7 +269,28 @@ final class SortCoordinator {
                 notifier.notifySorted(summary.moved)
                 notifier.notifyFailures(summary.failed)
             }
+            recordStats(from: summary)
         }
+    }
+
+    /// Persist one StatRecord per successful move for the stats dashboard. Done off
+    /// the main actor — stats are best-effort and must never block a sweep.
+    private func recordStats(from summary: SweepSummary) {
+        let records: [StatRecord] = summary.entries.compactMap { entry in
+            guard case .moved = entry.outcome, let destination = entry.destination else { return nil }
+            return StatRecord(date: entry.date,
+                              category: StatsStore.category(fromDestination: destination),
+                              bytes: entry.byteCount)
+        }
+        guard !records.isEmpty else { return }
+        let store = statsStore
+        Task.detached(priority: .utility) { store.append(records) }
+    }
+
+    /// Load the full persisted move history for the stats dashboard.
+    func loadStats() async -> [StatRecord] {
+        let store = statsStore
+        return await Task.detached(priority: .userInitiated) { store.load() }.value
     }
 
     /// Briefly show a "Sorted N" confirmation (icon + title go green/check), then

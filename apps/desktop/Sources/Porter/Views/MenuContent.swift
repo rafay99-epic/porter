@@ -11,6 +11,7 @@ struct MenuContent: View {
     @Bindable var updater: Updater
     @Environment(\.openWindow) private var openWindow
     @State private var showingPreview = false
+    @State private var showingStats = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -85,6 +86,7 @@ struct MenuContent: View {
             }
             Menu {
                 Button("Preview Sort…") { showingPreview = true }
+                Button("Statistics…") { showingStats = true }
                 SettingsLink { Text("Settings…") }
                 Button("Reveal Log in Finder") { coordinator.revealLogInFinder() }
                 Divider()
@@ -97,5 +99,6 @@ struct MenuContent: View {
         }
         .padding(12)
         .sheet(isPresented: $showingPreview) { PreviewSheet(coordinator: coordinator) }
+        .sheet(isPresented: $showingStats) { StatsView(coordinator: coordinator) }
     }
 }

@@ -9,6 +9,7 @@ struct DashboardView: View {
     @Bindable var loginItem: LoginItem
     @Bindable var updater: Updater
     @State private var showingPreview = false
+    @State private var showingStats = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -199,11 +200,12 @@ struct DashboardView: View {
             Button("Sort Now") { coordinator.sortNow() }
                 .buttonStyle(.borderedProminent)
             Button("Preview…") { showingPreview = true }
-            Button("Reveal Log") { coordinator.revealLogInFinder() }
+            Button("Stats…") { showingStats = true }
             Spacer()
             SettingsLink { Text("Settings…") }
         }
         .padding(16)
         .sheet(isPresented: $showingPreview) { PreviewSheet(coordinator: coordinator) }
+        .sheet(isPresented: $showingStats) { StatsView(coordinator: coordinator) }
     }
 }

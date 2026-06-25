@@ -11,6 +11,8 @@ public struct ActivityEntry: Identifiable, Sendable, Equatable {
     /// icon via `FileCategory.symbol(forFolder:)`.
     public let destination: String?
     public let outcome: Outcome
+    /// Size of the file in bytes (0 when unknown). Drives the stats "space moved".
+    public let byteCount: Int64
     /// Full path the file was moved *from* — the watched-folder location. Needed to
     /// put it back on "Undo". Nil when unknown (older entries).
     public let sourcePath: String?
@@ -26,13 +28,14 @@ public struct ActivityEntry: Identifiable, Sendable, Equatable {
     }
 
     public init(id: UUID = UUID(), date: Date, fileName: String,
-                destination: String?, outcome: Outcome,
+                destination: String?, outcome: Outcome, byteCount: Int64 = 0,
                 sourcePath: String? = nil, finalPath: String? = nil, undone: Bool = false) {
         self.id = id
         self.date = date
         self.fileName = fileName
         self.destination = destination
         self.outcome = outcome
+        self.byteCount = byteCount
         self.sourcePath = sourcePath
         self.finalPath = finalPath
         self.undone = undone

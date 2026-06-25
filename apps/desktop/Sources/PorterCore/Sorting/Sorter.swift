@@ -84,7 +84,7 @@ public struct Sorter: Sendable {
                 summary.entries.append(ActivityEntry(
                     date: now, fileName: item.name, destination: item.destination,
                     outcome: .moved(folder: dest.deletingLastPathComponent().lastPathComponent),
-                    sourcePath: item.url.path, finalPath: dest.path))
+                    byteCount: item.size, sourcePath: item.url.path, finalPath: dest.path))
             } catch Mover.MoveError.skippedExisting {
                 // Conflict policy (skip / keep-newer) chose to leave it in place —
                 // a silent skip, exactly like a junk/partial skip. Not a failure.
@@ -173,8 +173,8 @@ public struct Sorter: Sendable {
                 let routed = routing(for: meta, now: now, source: source)
                 // Expand date tokens ({yyyy}/{MM}…) against the file's own date.
                 let destination = DestinationTemplate.expand(routed.destination, date: modified)
-                result.files.append(EligibleFile(url: url, name: name,
-                                                 destination: destination, policy: routed.policy))
+                result.files.append(EligibleFile(url: url, name: name, destination: destination,
+                                                 policy: routed.policy, size: meta.size))
             }
         }
         return result
@@ -201,6 +201,7 @@ public struct Sorter: Sendable {
         let name: String
         let destination: String
         let policy: ConflictPolicy
+        let size: Int64
     }
 
     private func describe(_ error: Error) -> String {
