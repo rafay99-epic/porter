@@ -19,13 +19,13 @@ struct DashboardView: View {
             }
 
             hero
-                .padding(.top, 24)
-                .padding(.bottom, 16)
+                .padding(.top, 22)
+                .padding(.bottom, 14)
                 .padding(.horizontal, 24)
 
             watchingCard
                 .padding(.horizontal, 24)
-                .padding(.bottom, 16)
+                .padding(.bottom, 14)
 
             stateCallout
                 .padding(.horizontal, 24)
@@ -41,13 +41,15 @@ struct DashboardView: View {
             }
             .padding(.horizontal, 24).padding(.vertical, 10)
 
-            ActivityListView(entries: coordinator.activity, maxHeight: .infinity,
+            // Finite cap (not .infinity) so the window hugs its content — short and
+            // tidy when paused/empty, scrolling once there's a real backlog.
+            ActivityListView(entries: coordinator.activity, maxHeight: 300,
                              onUndo: { coordinator.undo($0) })
 
             Divider()
             footer
         }
-        .frame(minWidth: 460, minHeight: 560)
+        .frame(width: 540)
     }
 
     // MARK: - Hero
@@ -217,14 +219,22 @@ struct DashboardView: View {
 
     private var footer: some View {
         HStack(spacing: 8) {
-            Button { coordinator.sortNow() } label: {
-                Label("Sort Now", systemImage: "arrow.triangle.2.circlepath")
-            }
-            .buttonStyle(.borderedProminent)
-
-            Button { coordinator.setPaused(!coordinator.isPaused) } label: {
-                Label(coordinator.isPaused ? "Resume" : "Pause",
-                      systemImage: coordinator.isPaused ? "play.fill" : "pause.fill")
+            // Primary action follows the state: Resume when paused, otherwise Sort
+            // Now (with a Pause beside it). Avoids a disabled "Sort Now" that does
+            // nothing while paused.
+            if coordinator.isPaused {
+                Button { coordinator.setPaused(false) } label: {
+                    Label("Resume", systemImage: "play.fill")
+                }
+                .buttonStyle(.borderedProminent)
+            } else {
+                Button { coordinator.sortNow() } label: {
+                    Label("Sort Now", systemImage: "arrow.triangle.2.circlepath")
+                }
+                .buttonStyle(.borderedProminent)
+                Button { coordinator.setPaused(true) } label: {
+                    Label("Pause", systemImage: "pause.fill")
+                }
             }
             Button { showingPreview = true } label: { Label("Preview", systemImage: "eye") }
             Button { showingStats = true } label: { Label("Stats", systemImage: "chart.bar") }
@@ -234,7 +244,7 @@ struct DashboardView: View {
             SettingsLink { Label("Settings", systemImage: "gearshape") }
         }
         .buttonStyle(.bordered)
-        .controlSize(.large)
+        .controlSize(.regular)
         .labelStyle(.titleAndIcon)
         .padding(16)
         .sheet(isPresented: $showingPreview) { PreviewSheet(coordinator: coordinator) }

@@ -127,8 +127,9 @@ struct ActivityListView: View {
                     .font(.caption).foregroundStyle(.tertiary)
                     .multilineTextAlignment(.center)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .padding(.vertical, 28)
+            .frame(maxWidth: .infinity)
+            .frame(height: 150)
+            .padding(.vertical, 16)
         } else {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {

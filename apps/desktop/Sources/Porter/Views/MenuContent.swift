@@ -77,18 +77,27 @@ struct MenuContent: View {
     }
 
     private var footer: some View {
-        HStack(spacing: 12) {
-            Button("Sort Now") { coordinator.sortNow() }
+        HStack(spacing: 10) {
+            // Primary action mirrors the dashboard: Resume when paused, else Sort
+            // Now. Pause/Resume is right here in the menu bar, not buried in a submenu.
+            if coordinator.isPaused {
+                Button { coordinator.setPaused(false) } label: {
+                    Label("Resume", systemImage: "play.fill")
+                }
+                .buttonStyle(.borderedProminent)
+            } else {
+                Button("Sort Now") { coordinator.sortNow() }
+                Button { coordinator.setPaused(true) } label: {
+                    Image(systemName: "pause.fill")
+                }
+                .help("Pause sorting")
+            }
             Spacer()
-            Button("Open Porter") {
+            Button("Open") {
                 openWindow(id: "main")
                 NSApp.activate(ignoringOtherApps: true)
             }
             Menu {
-                Button(coordinator.isPaused ? "Resume Sorting" : "Pause Sorting") {
-                    coordinator.setPaused(!coordinator.isPaused)
-                }
-                Divider()
                 Button("Preview Sort…") { showingPreview = true }
                 Button("Statistics…") { showingStats = true }
                 SettingsLink { Text("Settings…") }
