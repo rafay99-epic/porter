@@ -131,28 +131,94 @@ private struct RuleRow: View {
     }
 }
 
-/// Sheet to edit a single rule across all match kinds.
+/// How multiple conditions combine.
+private enum Combinator: String, CaseIterable, Identifiable {
+    case all = "Match ALL"
+    case any = "Match ANY"
+    var id: String { rawValue }
+}
+
+/// One editable leaf condition (the UI form of a non-compound `RuleMatch`).
+private struct EditableCondition: Identifiable {
+    enum Kind: String, CaseIterable, Identifiable {
+        case extensions = "Extension"
+        case prefix = "Name starts with"
+        case suffix = "Name ends with"
+        case contains = "Name contains"
+        case regex = "Regex"
+        case kind = "Kind"
+        case largerThan = "Larger than"
+        case smallerThan = "Smaller than"
+        case olderThan = "Older than"
+        case newerThan = "Newer than"
+        case anything = "Anything else"
+        var id: String { rawValue }
+    }
+
+    let id = UUID()
+    var kind: Kind = .extensions
+    var text = ""
+    var extensionsText = ""
+    var sizeMB = 100.0
+    var days = 30.0
+    var fileKind: FileKind = .image
+
+    init() {}
+
+    /// Build from an existing leaf match. Returns nil for compound matches, which
+    /// this flat editor doesn't represent.
+    init?(_ match: RuleMatch) {
+        switch match {
+        case .extensions(let e):   kind = .extensions; extensionsText = e.joined(separator: ", ")
+        case .namePrefix(let p):   kind = .prefix; text = p
+        case .nameSuffix(let s):   kind = .suffix; text = s
+        case .nameContains(let c): kind = .contains; text = c
+        case .regex(let r):        kind = .regex; text = r
+        case .kind(let k):         kind = .kind; fileKind = k
+        case .largerThan(let b):   kind = .largerThan; sizeMB = ByteSize.toMegabytes(b)
+        case .smallerThan(let b):  kind = .smallerThan; sizeMB = ByteSize.toMegabytes(b)
+        case .olderThan(let d):    kind = .olderThan; days = Double(d)
+        case .newerThan(let d):    kind = .newerThan; days = Double(d)
+        case .anything:            kind = .anything
+        case .all, .any:           return nil
+        }
+    }
+
+    var match: RuleMatch {
+        switch kind {
+        case .extensions:  return .extensions(parseExtensions(extensionsText))
+        case .prefix:      return .namePrefix(text)
+        case .suffix:      return .nameSuffix(text)
+        case .contains:    return .nameContains(text)
+        case .regex:       return .regex(text)
+        case .kind:        return .kind(fileKind)
+        case .largerThan:  return .largerThan(bytes: ByteSize.megabytes(sizeMB))
+        case .smallerThan: return .smallerThan(bytes: ByteSize.megabytes(sizeMB))
+        case .olderThan:   return .olderThan(days: Int(days))
+        case .newerThan:   return .newerThan(days: Int(days))
+        case .anything:    return .anything
+        }
+    }
+}
+
+private func parseExtensions(_ text: String) -> [String] {
+    text.split(whereSeparator: { $0 == "," || $0 == " " })
+        .map { $0.trimmingCharacters(in: CharacterSet(charactersIn: ". ")).lowercased() }
+        .filter { !$0.isEmpty }
+}
+
+/// Sheet to edit a single rule — one or more conditions combined with AND/OR,
+/// plus destination and conflict policy.
 private struct RuleEditorSheet: View {
     @Environment(\.dismiss) private var dismiss
     private let id: UUID
     private let enabled: Bool
     private let nasRoot: String
-    @State private var kind: Kind
-    @State private var text: String
-    @State private var extensionsText: String
+    @State private var combinator: Combinator
+    @State private var conditions: [EditableCondition]
     @State private var destination: String
     @State private var policy: ConflictPolicy
     let onSave: (SortRule) -> Void
-
-    private enum Kind: String, CaseIterable, Identifiable {
-        case extensions = "Extensions"
-        case prefix = "Name starts with"
-        case suffix = "Name ends with"
-        case contains = "Name contains"
-        case regex = "Regex"
-        case anything = "Anything else"
-        var id: String { rawValue }
-    }
 
     init(rule: SortRule, nasRoot: String, onSave: @escaping (SortRule) -> Void) {
         self.id = rule.id
@@ -160,12 +226,15 @@ private struct RuleEditorSheet: View {
         self.nasRoot = nasRoot
         self.onSave = onSave
         switch rule.match {
-        case .extensions(let exts): _kind = State(initialValue: .extensions); _extensionsText = State(initialValue: exts.joined(separator: ", ")); _text = State(initialValue: "")
-        case .namePrefix(let p):    _kind = State(initialValue: .prefix); _text = State(initialValue: p); _extensionsText = State(initialValue: "")
-        case .nameSuffix(let s):    _kind = State(initialValue: .suffix); _text = State(initialValue: s); _extensionsText = State(initialValue: "")
-        case .nameContains(let c):  _kind = State(initialValue: .contains); _text = State(initialValue: c); _extensionsText = State(initialValue: "")
-        case .regex(let r):         _kind = State(initialValue: .regex); _text = State(initialValue: r); _extensionsText = State(initialValue: "")
-        case .anything:             _kind = State(initialValue: .anything); _text = State(initialValue: ""); _extensionsText = State(initialValue: "")
+        case .all(let subs):
+            _combinator = State(initialValue: .all)
+            _conditions = State(initialValue: subs.compactMap(EditableCondition.init))
+        case .any(let subs):
+            _combinator = State(initialValue: .any)
+            _conditions = State(initialValue: subs.compactMap(EditableCondition.init))
+        default:
+            _combinator = State(initialValue: .all)
+            _conditions = State(initialValue: [EditableCondition(rule.match) ?? EditableCondition()])
         }
         _destination = State(initialValue: rule.destination)
         _policy = State(initialValue: rule.conflictPolicy)
@@ -174,19 +243,28 @@ private struct RuleEditorSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("Edit Rule").font(.headline)
-            Picker("Match", selection: $kind) {
-                ForEach(Kind.allCases) { Text($0.rawValue).tag($0) }
+
+            if conditions.count > 1 {
+                Picker("", selection: $combinator) {
+                    ForEach(Combinator.allCases) { Text($0.rawValue).tag($0) }
+                }
+                .pickerStyle(.segmented).labelsHidden()
             }
-            switch kind {
-            case .extensions:
-                TextField("Extensions (comma-separated): jpg, png, pdf", text: $extensionsText)
-                    .textFieldStyle(.roundedBorder)
-            case .prefix, .suffix, .contains, .regex:
-                TextField(placeholder, text: $text).textFieldStyle(.roundedBorder)
-            case .anything:
-                Text("Matches every file that no earlier rule caught.")
-                    .font(.caption).foregroundStyle(.secondary)
+
+            VStack(spacing: 8) {
+                ForEach($conditions) { $condition in
+                    ConditionRow(condition: $condition, canRemove: conditions.count > 1) {
+                        conditions.removeAll { $0.id == condition.id }
+                    }
+                }
             }
+            Button {
+                conditions.append(EditableCondition())
+            } label: { Label("Add Condition", systemImage: "plus.circle") }
+                .buttonStyle(.borderless)
+
+            Divider()
+
             HStack {
                 TextField("Destination folder on NAS (e.g. Documents/Invoices)", text: $destination)
                     .textFieldStyle(.roundedBorder)
@@ -204,11 +282,11 @@ private struct RuleEditorSheet: View {
                 Spacer()
                 Button("Save") { save() }
                     .buttonStyle(.borderedProminent)
-                    .disabled(destination.trimmingCharacters(in: .whitespaces).isEmpty)
+                    .disabled(destination.trimmingCharacters(in: .whitespaces).isEmpty || conditions.isEmpty)
             }
         }
         .padding(20)
-        .frame(width: 420)
+        .frame(width: 460)
     }
 
     /// Hint about date tokens, with a live expansion of the current destination so
@@ -232,34 +310,78 @@ private struct RuleEditorSheet: View {
         }
     }
 
-    private var placeholder: String {
-        switch kind {
-        case .prefix: return "e.g. Screenshot "
-        case .suffix: return "e.g. -final.pdf"
-        case .contains: return "e.g. invoice"
-        case .regex: return #"e.g. ^\d{4}-\d{2}-\d{2}"#
-        default: return ""
-        }
-    }
-
     private func save() {
+        let leaves = conditions.map(\.match)
         let match: RuleMatch
-        switch kind {
-        case .extensions:
-            let exts = extensionsText
-                .split(whereSeparator: { $0 == "," || $0 == " " })
-                .map { $0.trimmingCharacters(in: CharacterSet(charactersIn: ". ")).lowercased() }
-                .filter { !$0.isEmpty }
-            match = .extensions(exts)
-        case .prefix:   match = .namePrefix(text)
-        case .suffix:   match = .nameSuffix(text)
-        case .contains: match = .nameContains(text)
-        case .regex:    match = .regex(text)
-        case .anything: match = .anything
+        if leaves.count == 1 {
+            match = leaves[0]
+        } else {
+            match = combinator == .all ? .all(leaves) : .any(leaves)
         }
         onSave(SortRule(id: id, enabled: enabled, match: match,
                         destination: destination.trimmingCharacters(in: .whitespaces),
                         conflictPolicy: policy))
         dismiss()
+    }
+}
+
+/// One row in the rule editor: a condition kind picker plus the value input it
+/// needs, and a remove button when there's more than one condition.
+private struct ConditionRow: View {
+    @Binding var condition: EditableCondition
+    let canRemove: Bool
+    let onRemove: () -> Void
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Picker("", selection: $condition.kind) {
+                ForEach(EditableCondition.Kind.allCases) { Text($0.rawValue).tag($0) }
+            }
+            .labelsHidden().frame(width: 150)
+            valueField
+            Spacer(minLength: 0)
+            if canRemove {
+                Button(role: .destructive) { onRemove() } label: { Image(systemName: "minus.circle") }
+                    .buttonStyle(.borderless)
+            }
+        }
+    }
+
+    @ViewBuilder private var valueField: some View {
+        switch condition.kind {
+        case .extensions:
+            TextField("jpg, png, pdf", text: $condition.extensionsText).textFieldStyle(.roundedBorder)
+        case .prefix, .suffix, .contains, .regex:
+            TextField(placeholder, text: $condition.text).textFieldStyle(.roundedBorder)
+        case .kind:
+            Picker("", selection: $condition.fileKind) {
+                ForEach(FileKind.allCases) { Text($0.label).tag($0) }
+            }.labelsHidden()
+        case .largerThan, .smallerThan:
+            HStack(spacing: 4) {
+                TextField("100", value: $condition.sizeMB, format: .number)
+                    .textFieldStyle(.roundedBorder).frame(width: 70)
+                Text("MB").foregroundStyle(.secondary)
+            }
+        case .olderThan, .newerThan:
+            HStack(spacing: 4) {
+                TextField("30", value: $condition.days, format: .number)
+                    .textFieldStyle(.roundedBorder).frame(width: 70)
+                Text("days").foregroundStyle(.secondary)
+            }
+        case .anything:
+            Text("Matches everything no earlier rule caught.")
+                .font(.caption).foregroundStyle(.secondary)
+        }
+    }
+
+    private var placeholder: String {
+        switch condition.kind {
+        case .prefix:   return "e.g. Screenshot "
+        case .suffix:   return "e.g. -final.pdf"
+        case .contains: return "e.g. invoice"
+        case .regex:    return #"e.g. ^\d{4}-\d{2}-\d{2}"#
+        default:        return ""
+        }
     }
 }

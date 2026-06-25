@@ -48,6 +48,53 @@ final class RuleEngineTests: XCTestCase {
         XCTAssertFalse(RuleMatch.regex("[").matches("anything"))                      // invalid regex → no match
         XCTAssertTrue(RuleMatch.anything.matches("whatever"))
     }
+
+    func testSizeConditions() {
+        let big = FileMetadata(name: "movie.mov", size: 2_000_000_000)
+        let small = FileMetadata(name: "note.txt", size: 1_000)
+        XCTAssertTrue(RuleMatch.largerThan(bytes: 1_000_000_000).matches(big))
+        XCTAssertFalse(RuleMatch.largerThan(bytes: 1_000_000_000).matches(small))
+        XCTAssertTrue(RuleMatch.smallerThan(bytes: 1_000_000).matches(small))
+    }
+
+    func testAgeConditions() {
+        let now = Date(timeIntervalSince1970: 1_000_000_000)
+        let old = FileMetadata(name: "old.zip", modified: now.addingTimeInterval(-10 * 86_400))
+        XCTAssertTrue(RuleMatch.olderThan(days: 7).matches(old, now: now))
+        XCTAssertFalse(RuleMatch.newerThan(days: 7).matches(old, now: now))
+        let fresh = FileMetadata(name: "fresh.zip", modified: now.addingTimeInterval(-3_600))
+        XCTAssertTrue(RuleMatch.newerThan(days: 1).matches(fresh, now: now))
+    }
+
+    func testKindConditionUsesUTIHierarchy() {
+        // No explicit UTI — resolved from the extension.
+        XCTAssertTrue(RuleMatch.kind(.image).matches(FileMetadata(name: "vacation.heic")))
+        XCTAssertTrue(RuleMatch.kind(.video).matches(FileMetadata(name: "clip.mov")))
+        XCTAssertFalse(RuleMatch.kind(.audio).matches(FileMetadata(name: "vacation.heic")))
+    }
+
+    func testAndOrCombinators() {
+        // Large videos only.
+        let big = FileMetadata(name: "film.mp4", size: 5_000_000_000)
+        let smallVideo = FileMetadata(name: "tiny.mp4", size: 1_000)
+        let largeVideos = RuleMatch.all([.kind(.video), .largerThan(bytes: 1_000_000_000)])
+        XCTAssertTrue(largeVideos.matches(big))
+        XCTAssertFalse(largeVideos.matches(smallVideo))
+
+        // Either a PDF or something with "invoice" in the name.
+        let either = RuleMatch.any([.extensions(["pdf"]), .nameContains("invoice")])
+        XCTAssertTrue(either.matches(FileMetadata(name: "manual.pdf")))
+        XCTAssertTrue(either.matches(FileMetadata(name: "march invoice.txt")))
+        XCTAssertFalse(either.matches(FileMetadata(name: "photo.png")))
+    }
+
+    func testNewConditionsSurviveCodableRoundTrip() throws {
+        let rule = SortRule(match: .all([.kind(.image), .largerThan(bytes: 5_000_000)]),
+                            destination: "Pictures/Large", conflictPolicy: .keepNewer)
+        let data = try JSONEncoder().encode([rule])
+        let decoded = try JSONDecoder().decode([SortRule].self, from: data)
+        XCTAssertEqual(decoded, [rule])
+    }
 }
 
 final class FileTriageTests: XCTestCase {

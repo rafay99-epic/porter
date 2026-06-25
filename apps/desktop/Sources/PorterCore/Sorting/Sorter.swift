@@ -159,14 +159,18 @@ public struct Sorter: Sendable {
                 let name = url.lastPathComponent
                 if FileTriage.isMacOSJunk(name) { continue }   // not counted, not logged
                 if ignoring.contains(url.standardizedFileURL.path) { continue }   // pulled back by Undo
-                let values = try? url.resourceValues(forKeys: [.isDirectoryKey, .contentModificationDateKey])
+                let values = try? url.resourceValues(forKeys: [
+                    .isDirectoryKey, .contentModificationDateKey, .fileSizeKey, .contentTypeKey])
                 if values?.isDirectory == true { result.skipped += 1; continue }
                 if FileTriage.isPartialOrHidden(name) { result.skipped += 1; continue }
                 let modified = values?.contentModificationDate ?? now
                 if !FileTriage.isSettled(modified: modified, now: now, seconds: settleSeconds) {
                     result.skipped += 1; continue
                 }
-                let routed = routing(for: name, source: source)
+                let meta = FileMetadata(name: name, size: Int64(values?.fileSize ?? 0),
+                                        modified: modified,
+                                        contentTypeIdentifier: values?.contentType?.identifier)
+                let routed = routing(for: meta, now: now, source: source)
                 // Expand date tokens ({yyyy}/{MM}…) against the file's own date.
                 let destination = DestinationTemplate.expand(routed.destination, date: modified)
                 result.files.append(EligibleFile(url: url, name: name,
@@ -179,12 +183,12 @@ public struct Sorter: Sendable {
     /// Destination + conflict policy for `name` under this source's routing. A
     /// fixed source has no rule, so it keeps both copies (`.rename`) — the safe
     /// default; classify sources inherit the winning rule's policy.
-    private func routing(for name: String, source: WatchSource) -> (destination: String, policy: ConflictPolicy) {
+    private func routing(for meta: FileMetadata, now: Date, source: WatchSource) -> (destination: String, policy: ConflictPolicy) {
         switch source.routing {
         case .fixed(let folder):
             return (folder, .rename)
         case .classify:
-            if let rule = RuleEngine.firstMatch(for: name, using: rules) {
+            if let rule = RuleEngine.firstMatch(for: meta, now: now, using: rules) {
                 return (rule.destination, rule.conflictPolicy)
             }
             return ("Other", .rename)
