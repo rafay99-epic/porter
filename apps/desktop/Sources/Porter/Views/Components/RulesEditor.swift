@@ -6,16 +6,28 @@ import PorterCore
 struct RulesEditor: View {
     @Bindable var settings: PorterSettings
     @State private var editing: SortRule?
+    @State private var testName = ""
+
+    /// The rule that would win for the typed test name (nil when the field is empty
+    /// or nothing matches). Used both to show the result and to highlight the row.
+    private var winningRule: SortRule? {
+        let trimmed = testName.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return nil }
+        return RuleEngine.firstMatch(for: trimmed, using: settings.rules)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Rules run top to bottom — the first enabled match wins. End with an “anything else” catch-all.")
                 .font(.caption).foregroundStyle(.secondary)
 
+            tester
+
             ForEach($settings.rules) { $rule in
                 RuleRow(rule: $rule,
                         position: position(of: rule.id),
                         count: settings.rules.count,
+                        isWinner: !testName.trimmingCharacters(in: .whitespaces).isEmpty && rule.id == winningRule?.id,
                         onEdit: { editing = rule },
                         onDelete: { settings.rules.removeAll { $0.id == rule.id } },
                         onMove: { direction in move(rule.id, by: direction) })
@@ -30,6 +42,38 @@ struct RulesEditor: View {
         .sheet(item: $editing) { rule in
             RuleEditorSheet(rule: rule, nasRoot: settings.nasMountPath) { saved in commit(saved) }
         }
+    }
+
+    /// Type a filename, see which rule catches it and where it'd land.
+    private var tester: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                Image(systemName: "testtube.2").foregroundStyle(.secondary)
+                TextField("Test a filename, e.g. invoice-2026.pdf", text: $testName)
+                    .textFieldStyle(.roundedBorder)
+                if !testName.isEmpty {
+                    Button { testName = "" } label: { Image(systemName: "xmark.circle.fill") }
+                        .buttonStyle(.borderless).foregroundStyle(.tertiary)
+                }
+            }
+            if !testName.trimmingCharacters(in: .whitespaces).isEmpty {
+                HStack(spacing: 6) {
+                    if let rule = winningRule {
+                        Image(systemName: FileCategory.symbol(forFolder: rule.destination)).foregroundStyle(.tint)
+                        Text("Matches “\(rule.match.summary)” → ").font(.caption) +
+                        Text(rule.destination).font(.caption).bold()
+                    } else {
+                        Image(systemName: "arrow.uturn.down").foregroundStyle(.secondary)
+                        Text("No rule matches → files would land in ").font(.caption) +
+                        Text("Other").font(.caption).bold()
+                    }
+                }
+                .foregroundStyle(.secondary)
+            }
+        }
+        .padding(10)
+        .background(.quaternary.opacity(0.3), in: RoundedRectangle(cornerRadius: 8))
+        .padding(.bottom, 4)
     }
 
     private func position(of id: UUID) -> Int { settings.rules.firstIndex { $0.id == id } ?? 0 }
@@ -54,6 +98,7 @@ private struct RuleRow: View {
     @Binding var rule: SortRule
     let position: Int
     let count: Int
+    var isWinner = false
     let onEdit: () -> Void
     let onDelete: () -> Void
     let onMove: (Int) -> Void
@@ -62,13 +107,16 @@ private struct RuleRow: View {
         HStack(spacing: 10) {
             Toggle("", isOn: $rule.enabled).labelsHidden()
             Image(systemName: FileCategory.symbol(forFolder: rule.destination))
-                .foregroundStyle(.secondary).frame(width: 20)
+                .foregroundStyle(isWinner ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary)).frame(width: 20)
             VStack(alignment: .leading, spacing: 1) {
                 Text(rule.match.summary).font(.callout)
                 Text("→ \(rule.destination.isEmpty ? "—" : rule.destination)")
                     .font(.caption2).foregroundStyle(.secondary)
             }
             Spacer()
+            if isWinner {
+                Text("WINS").font(.caption2).bold().foregroundStyle(.tint)
+            }
             Button { onMove(-1) } label: { Image(systemName: "chevron.up") }
                 .buttonStyle(.borderless).disabled(position == 0)
             Button { onMove(1) } label: { Image(systemName: "chevron.down") }
@@ -77,6 +125,9 @@ private struct RuleRow: View {
             Button(role: .destructive, action: onDelete) { Image(systemName: "trash") }.buttonStyle(.borderless)
         }
         .padding(.vertical, 2)
+        .padding(.horizontal, 6)
+        .background(isWinner ? AnyShapeStyle(.tint.opacity(0.12)) : AnyShapeStyle(.clear),
+                    in: RoundedRectangle(cornerRadius: 6))
     }
 }
 
