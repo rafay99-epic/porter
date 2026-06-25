@@ -181,6 +181,36 @@ final class MoverTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: nas.appendingPathComponent("PDFs/b.pdf").path))
     }
 
+    func testRecursiveWatchSortsSubfolders() throws {
+        // Top-level file plus one nested two levels deep.
+        _ = try makeFile("top.pdf")
+        let sub = source.appendingPathComponent("a/b")
+        try FileManager.default.createDirectory(at: sub, withIntermediateDirectories: true)
+        try "deep".write(to: sub.appendingPathComponent("buried.png"), atomically: true, encoding: .utf8)
+
+        let src = WatchSource(path: source.path, routing: .classify, recursive: true)
+        let sorter = Sorter(sources: [src], rules: SortRule.defaults, nasRoot: nas, settleSeconds: 0)
+        let summary = sorter.sweep(now: Date().addingTimeInterval(60))
+
+        XCTAssertEqual(summary.moved, 2, "both the top-level and the buried file move")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: nas.appendingPathComponent("PDFs/top.pdf").path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: nas.appendingPathComponent("Pictures/buried.png").path))
+    }
+
+    func testNonRecursiveLeavesSubfolderFiles() throws {
+        _ = try makeFile("top.pdf")
+        let sub = source.appendingPathComponent("nested")
+        try FileManager.default.createDirectory(at: sub, withIntermediateDirectories: true)
+        try "deep".write(to: sub.appendingPathComponent("buried.png"), atomically: true, encoding: .utf8)
+
+        let src = WatchSource(path: source.path, routing: .classify, recursive: false)
+        let sorter = Sorter(sources: [src], rules: SortRule.defaults, nasRoot: nas, settleSeconds: 0)
+        let summary = sorter.sweep(now: Date().addingTimeInterval(60))
+
+        XCTAssertEqual(summary.moved, 1, "only the top-level file moves")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: sub.appendingPathComponent("buried.png").path))
+    }
+
     func testFixedRoutingSendsEverythingToOneFolder() throws {
         _ = try makeFile("vacation.png")
         _ = try makeFile("notes.txt")

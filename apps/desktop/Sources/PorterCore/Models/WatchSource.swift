@@ -6,6 +6,8 @@ public struct WatchSource: Codable, Identifiable, Equatable, Sendable {
     public var path: String
     public var enabled: Bool
     public var routing: Routing
+    /// When true, files in subfolders are sorted too (not just the top level).
+    public var recursive: Bool
 
     /// How files from this source are filed onto the NAS.
     public enum Routing: Codable, Equatable, Sendable {
@@ -16,11 +18,28 @@ public struct WatchSource: Codable, Identifiable, Equatable, Sendable {
         case fixed(folder: String)
     }
 
-    public init(id: UUID = UUID(), path: String, enabled: Bool = true, routing: Routing = .classify) {
+    public init(id: UUID = UUID(), path: String, enabled: Bool = true,
+                routing: Routing = .classify, recursive: Bool = false) {
         self.id = id
         self.path = path
         self.enabled = enabled
         self.routing = routing
+        self.recursive = recursive
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, path, enabled, routing, recursive
+    }
+
+    /// Lenient decode so adding a key (like `recursive`) never invalidates an
+    /// existing settings.json — old sources load with sensible defaults.
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        path = try c.decode(String.self, forKey: .path)
+        enabled = try c.decodeIfPresent(Bool.self, forKey: .enabled) ?? true
+        routing = try c.decodeIfPresent(Routing.self, forKey: .routing) ?? .classify
+        recursive = try c.decodeIfPresent(Bool.self, forKey: .recursive) ?? false
     }
 
     public var url: URL { URL(fileURLWithPath: path) }

@@ -139,12 +139,9 @@ public struct Sorter: Sendable {
         let fm = FileManager.default
         var result = TriageResult()
         for source in sources where source.enabled {
-            let contents: [URL]
+            let collected: (files: [URL], skippedDirs: Int)
             do {
-                contents = try fm.contentsOfDirectory(
-                    at: source.url,
-                    includingPropertiesForKeys: [.isDirectoryKey, .contentModificationDateKey],
-                    options: [])
+                collected = try collectFiles(in: source, fm: fm)
             } catch {
                 let nsError = error as NSError
                 // 257 = no read permission (TCC) → surface as readDenied.
@@ -154,14 +151,14 @@ public struct Sorter: Sendable {
                 }
                 continue
             }
+            result.skipped += collected.skippedDirs
 
-            for url in contents {
+            for url in collected.files {
                 let name = url.lastPathComponent
                 if FileTriage.isMacOSJunk(name) { continue }   // not counted, not logged
                 if ignoring.contains(url.standardizedFileURL.path) { continue }   // pulled back by Undo
                 let values = try? url.resourceValues(forKeys: [
-                    .isDirectoryKey, .contentModificationDateKey, .fileSizeKey, .contentTypeKey])
-                if values?.isDirectory == true { result.skipped += 1; continue }
+                    .contentModificationDateKey, .fileSizeKey, .contentTypeKey])
                 if FileTriage.isPartialOrHidden(name) { result.skipped += 1; continue }
                 let modified = values?.contentModificationDate ?? now
                 if !FileTriage.isSettled(modified: modified, now: now, seconds: settleSeconds) {
@@ -178,6 +175,40 @@ public struct Sorter: Sendable {
             }
         }
         return result
+    }
+
+    /// Gather the candidate *files* in a source — shallow (top level only) or, when
+    /// the source opts in, recursively through subfolders. Directories are never
+    /// returned; in shallow mode a top-level directory counts as one skip (matching
+    /// the original behaviour), while recursive mode just descends into them.
+    /// macOS junk and hidden files are excluded up front. Throws on a read error so
+    /// the caller can flag `readDenied`.
+    private func collectFiles(in source: WatchSource, fm: FileManager) throws -> (files: [URL], skippedDirs: Int) {
+        let keys: [URLResourceKey] = [.isDirectoryKey]
+        if source.recursive {
+            guard let enumerator = fm.enumerator(
+                at: source.url, includingPropertiesForKeys: keys,
+                options: [.skipsHiddenFiles, .skipsPackageDescendants]) else {
+                throw CocoaError(.fileReadNoSuchFile)
+            }
+            var files: [URL] = []
+            for case let url as URL in enumerator {
+                let isDir = (try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) ?? false
+                if !isDir { files.append(url) }
+            }
+            return (files, 0)
+        } else {
+            let contents = try fm.contentsOfDirectory(
+                at: source.url, includingPropertiesForKeys: keys, options: [])
+            var files: [URL] = []
+            var skippedDirs = 0
+            for url in contents {
+                if FileTriage.isMacOSJunk(url.lastPathComponent) { continue }   // not counted
+                let isDir = (try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) ?? false
+                if isDir { skippedDirs += 1 } else { files.append(url) }
+            }
+            return (files, skippedDirs)
+        }
     }
 
     /// Destination + conflict policy for `name` under this source's routing. A
