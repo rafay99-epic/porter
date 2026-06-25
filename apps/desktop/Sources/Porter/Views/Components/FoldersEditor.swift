@@ -14,7 +14,7 @@ struct FoldersEditor: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
             ForEach($settings.sources) { $source in
-                SourceRow(source: $source) { remove(source) }
+                SourceRow(source: $source, nasRoot: settings.nasMountPath) { remove(source) }
                 Divider()
             }
             Button { addFolder() } label: { Label("Add Folder…", systemImage: "plus.circle") }
@@ -36,6 +36,7 @@ struct FoldersEditor: View {
 
 private struct SourceRow: View {
     @Binding var source: WatchSource
+    let nasRoot: String
     let onRemove: () -> Void
 
     private enum RoutingKind { case classify, fixed }
@@ -64,6 +65,9 @@ private struct SourceRow: View {
                 .pickerStyle(.segmented).labelsHidden().fixedSize()
                 if routingKind.wrappedValue == .fixed {
                     TextField("NAS folder", text: fixedFolder).textFieldStyle(.roundedBorder)
+                    Button("Choose…") {
+                        if let picked = chooseNASFolder(nasRoot: nasRoot) { fixedFolder.wrappedValue = picked }
+                    }
                 }
             }
             .disabled(!source.enabled)

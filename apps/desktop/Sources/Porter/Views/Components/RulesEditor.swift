@@ -28,7 +28,7 @@ struct RulesEditor: View {
                 .buttonStyle(.borderless)
         }
         .sheet(item: $editing) { rule in
-            RuleEditorSheet(rule: rule) { saved in commit(saved) }
+            RuleEditorSheet(rule: rule, nasRoot: settings.nasMountPath) { saved in commit(saved) }
         }
     }
 
@@ -85,6 +85,7 @@ private struct RuleEditorSheet: View {
     @Environment(\.dismiss) private var dismiss
     private let id: UUID
     private let enabled: Bool
+    private let nasRoot: String
     @State private var kind: Kind
     @State private var text: String
     @State private var extensionsText: String
@@ -101,9 +102,10 @@ private struct RuleEditorSheet: View {
         var id: String { rawValue }
     }
 
-    init(rule: SortRule, onSave: @escaping (SortRule) -> Void) {
+    init(rule: SortRule, nasRoot: String, onSave: @escaping (SortRule) -> Void) {
         self.id = rule.id
         self.enabled = rule.enabled
+        self.nasRoot = nasRoot
         self.onSave = onSave
         switch rule.match {
         case .extensions(let exts): _kind = State(initialValue: .extensions); _extensionsText = State(initialValue: exts.joined(separator: ", ")); _text = State(initialValue: "")
@@ -132,8 +134,13 @@ private struct RuleEditorSheet: View {
                 Text("Matches every file that no earlier rule caught.")
                     .font(.caption).foregroundStyle(.secondary)
             }
-            TextField("Destination folder on NAS (e.g. Documents/Invoices)", text: $destination)
-                .textFieldStyle(.roundedBorder)
+            HStack {
+                TextField("Destination folder on NAS (e.g. Documents/Invoices)", text: $destination)
+                    .textFieldStyle(.roundedBorder)
+                Button("Choose…") {
+                    if let picked = chooseNASFolder(nasRoot: nasRoot) { destination = picked }
+                }
+            }
             HStack {
                 Button("Cancel") { dismiss() }
                 Spacer()
