@@ -194,6 +194,7 @@ private struct RuleEditorSheet: View {
                     if let picked = chooseNASFolder(nasRoot: nasRoot) { destination = picked }
                 }
             }
+            destinationHint
             Picker("If a file already exists", selection: $policy) {
                 ForEach(ConflictPolicy.allCases) { Text($0.label).tag($0) }
             }
@@ -208,6 +209,18 @@ private struct RuleEditorSheet: View {
         }
         .padding(20)
         .frame(width: 420)
+    }
+
+    /// Hint about date tokens, with a live expansion of the current destination so
+    /// the user sees today's resolved folder as they type.
+    @ViewBuilder private var destinationHint: some View {
+        if DestinationTemplate.hasTokens(destination) {
+            Text("Today this files into ").font(.caption).foregroundStyle(.secondary) +
+            Text(DestinationTemplate.expand(destination, date: Date())).font(.caption).bold()
+        } else {
+            Text("Tip: use date tokens like {yyyy}/{MM} to file into dated subfolders.")
+                .font(.caption).foregroundStyle(.secondary)
+        }
     }
 
     private var policyHelp: String {

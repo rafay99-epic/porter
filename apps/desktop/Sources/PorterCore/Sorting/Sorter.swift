@@ -167,8 +167,10 @@ public struct Sorter: Sendable {
                     result.skipped += 1; continue
                 }
                 let routed = routing(for: name, source: source)
+                // Expand date tokens ({yyyy}/{MM}…) against the file's own date.
+                let destination = DestinationTemplate.expand(routed.destination, date: modified)
                 result.files.append(EligibleFile(url: url, name: name,
-                                                 destination: routed.destination, policy: routed.policy))
+                                                 destination: destination, policy: routed.policy))
             }
         }
         return result
