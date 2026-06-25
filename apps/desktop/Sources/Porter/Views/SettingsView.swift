@@ -127,7 +127,7 @@ struct SettingsView: View {
 
     private var rules: some View {
         ScrollView {
-            RulesEditor(settings: settings)
+            RulesEditor(settings: settings, recentActivity: coordinator.activity)
                 .padding(4)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }

@@ -5,8 +5,17 @@ import PorterCore
 /// edit, delete, add. Editing a rule opens a sheet that covers every match kind.
 struct RulesEditor: View {
     @Bindable var settings: PorterSettings
+    /// Recent moves, used to suggest rules for file types that keep hitting the
+    /// catch-all. Defaults empty so the editor still works without history.
+    var recentActivity: [ActivityEntry] = []
     @State private var editing: SortRule?
     @State private var testName = ""
+    @State private var dismissedSuggestions: Set<String> = []
+
+    private var suggestions: [RuleSuggestion] {
+        SuggestionEngine.suggestions(from: recentActivity, rules: settings.rules,
+                                     dismissed: dismissedSuggestions)
+    }
 
     /// The rule that would win for the typed test name (nil when the field is empty
     /// or nothing matches). Used both to show the result and to highlight the row.
@@ -22,6 +31,8 @@ struct RulesEditor: View {
                 .font(.caption).foregroundStyle(.secondary)
 
             tester
+
+            if !suggestions.isEmpty { suggestionsBanner }
 
             ForEach($settings.rules) { $rule in
                 RuleRow(rule: $rule,
@@ -42,6 +53,30 @@ struct RulesEditor: View {
         .sheet(item: $editing) { rule in
             RuleEditorSheet(rule: rule, nasRoot: settings.nasMountPath) { saved in commit(saved) }
         }
+    }
+
+    /// Proposed rules for file types that keep hitting the catch-all.
+    private var suggestionsBanner: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label("Suggestions", systemImage: "lightbulb").font(.caption).bold().foregroundStyle(.tint)
+            ForEach(suggestions) { suggestion in
+                HStack(spacing: 8) {
+                    Image(systemName: "sparkles").foregroundStyle(.tint)
+                    Text("\(suggestion.count) “.\(suggestion.ext)” files went to the catch-all").font(.caption)
+                    Spacer()
+                    Button("Add Rule") { editing = suggestion.rule }
+                        .buttonStyle(.borderless).font(.caption)
+                    Button { dismissedSuggestions.insert(suggestion.ext) } label: {
+                        Image(systemName: "xmark")
+                    }
+                    .buttonStyle(.borderless).foregroundStyle(.tertiary)
+                    .help("Dismiss")
+                }
+            }
+        }
+        .padding(10)
+        .background(.tint.opacity(0.1), in: RoundedRectangle(cornerRadius: 8))
+        .padding(.bottom, 4)
     }
 
     /// Type a filename, see which rule catches it and where it'd land.
@@ -88,6 +123,11 @@ struct RulesEditor: View {
     private func commit(_ saved: SortRule) {
         if let idx = settings.rules.firstIndex(where: { $0.id == saved.id }) {
             settings.rules[idx] = saved
+        } else if saved.match != .anything,
+                  let catchAll = settings.rules.firstIndex(where: { $0.match == .anything }) {
+            // A new specific rule must come *before* the catch-all, or it could
+            // never win.
+            settings.rules.insert(saved, at: catchAll)
         } else {
             settings.rules.append(saved)
         }
