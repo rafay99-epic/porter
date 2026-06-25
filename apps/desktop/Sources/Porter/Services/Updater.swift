@@ -101,14 +101,7 @@ final class Updater {
         defer { isInstalling = false }
 
         do {
-            // Download the asset via its API URL with octet-stream + auth, so this
-            // works for the private repo (and public too).
-            var request = URLRequest(url: release.dmgURL)
-            request.setValue("application/octet-stream", forHTTPHeaderField: "Accept")
-            if let token = await Self.githubToken() {
-                request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-            }
-            let (downloaded, _) = try await URLSession.shared.download(for: request)
+            let (downloaded, _) = try await URLSession.shared.download(from: release.dmgURL)
             // Give it a .dmg extension so hdiutil is happy.
             let dmg = downloaded.deletingPathExtension().appendingPathExtension("dmg")
             try? FileManager.default.removeItem(at: dmg)
@@ -132,39 +125,13 @@ final class Updater {
     // MARK: - GitHub API
 
     private func fetchReleases() async throws -> [GHRelease] {
+        // Public repo — no auth needed. The Releases API and the asset
+        // browser_download_url are both reachable unauthenticated.
         let url = URL(string: "https://api.github.com/repos/\(Self.repoSlug)/releases")!
         var request = URLRequest(url: url)
         request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
-        if let token = await Self.githubToken() {
-            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        }
         let (data, _) = try await URLSession.shared.data(for: request)
         return try JSONDecoder().decode([GHRelease].self, from: data)
-    }
-
-    /// A GitHub token from the `gh` CLI (`gh auth token`), used to reach the private
-    /// repo's releases. Returns nil if `gh` isn't installed/authed — in which case
-    /// the update check simply can't see the private releases (surfaced as a status
-    /// message), mirroring how Crisp authenticates its updater.
-    private static func githubToken() async -> String? {
-        await Task.detached {
-            let candidates = ["/opt/homebrew/bin/gh", "/usr/local/bin/gh", "/usr/bin/gh"]
-            guard let gh = candidates.first(where: { FileManager.default.isExecutableFile(atPath: $0) }) else {
-                return nil
-            }
-            let process = Process()
-            process.executableURL = URL(fileURLWithPath: gh)
-            process.arguments = ["auth", "token"]
-            let pipe = Pipe()
-            process.standardOutput = pipe
-            process.standardError = Pipe()
-            do { try process.run() } catch { return nil }
-            process.waitUntilExit()
-            guard process.terminationStatus == 0 else { return nil }
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            let token = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines)
-            return (token?.isEmpty == false) ? token : nil
-        }.value
     }
 
     /// The newest release matching this channel that ships the channel's DMG.
@@ -177,7 +144,7 @@ final class Updater {
             return Available(
                 version: (release.tagName ?? title).replacingOccurrences(of: "v", with: ""),
                 title: title,
-                dmgURL: asset.url,
+                dmgURL: asset.browserDownloadURL,
                 buildNumber: Self.parseBuild(from: title))
         }
         return nil
@@ -289,9 +256,6 @@ private struct GHRelease: Decodable {
 
 private struct GHAsset: Decodable {
     let name: String
-    /// The API asset URL (`…/releases/assets/<id>`). For a *private* repo this is
-    /// what you download from, with `Accept: application/octet-stream` + an auth
-    /// header — `browser_download_url` won't work unauthenticated. It works for
-    /// public repos too, so we always use it.
-    let url: URL
+    let browserDownloadURL: URL
+    enum CodingKeys: String, CodingKey { case name, browserDownloadURL = "browser_download_url" }
 }

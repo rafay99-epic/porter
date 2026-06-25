@@ -7,7 +7,9 @@ public struct ActivityEntry: Identifiable, Sendable, Equatable {
     public let id: UUID
     public let date: Date
     public let fileName: String
-    public let category: FileCategory?
+    /// Destination folder on the NAS (the rule/routing decision). Drives the row
+    /// icon via `FileCategory.symbol(forFolder:)`.
+    public let destination: String?
     public let outcome: Outcome
 
     public enum Outcome: Sendable, Equatable {
@@ -16,11 +18,11 @@ public struct ActivityEntry: Identifiable, Sendable, Equatable {
     }
 
     public init(id: UUID = UUID(), date: Date, fileName: String,
-                category: FileCategory?, outcome: Outcome) {
+                destination: String?, outcome: Outcome) {
         self.id = id
         self.date = date
         self.fileName = fileName
-        self.category = category
+        self.destination = destination
         self.outcome = outcome
     }
 

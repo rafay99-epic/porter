@@ -94,7 +94,7 @@ struct DashboardView: View {
     private var watchingCard: some View {
         VStack(spacing: 0) {
             infoRow(icon: "folder.fill", label: "Watching",
-                    value: coordinator.settings.sourceURL.lastPathComponent, trailing: nil)
+                    value: watchingSummary, trailing: nil)
             Divider().padding(.leading, 40)
             infoRow(icon: "externaldrive.fill", label: "Filing to",
                     value: coordinator.settings.nasMountPath,
@@ -102,6 +102,15 @@ struct DashboardView: View {
         }
         .padding(.vertical, 4)
         .background(.quaternary.opacity(0.3), in: RoundedRectangle(cornerRadius: 10))
+    }
+
+    private var watchingSummary: String {
+        let names = coordinator.settings.sources.filter(\.enabled).map(\.name)
+        switch names.count {
+        case 0:    return "no folders"
+        case 1, 2: return names.joined(separator: ", ")
+        default:   return "\(names.count) folders"
+        }
     }
 
     private func infoRow(icon: String, label: String, value: String, trailing: AnyView?) -> some View {

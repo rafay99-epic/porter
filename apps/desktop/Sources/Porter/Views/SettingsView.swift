@@ -2,8 +2,8 @@ import SwiftUI
 import AppKit
 import PorterCore
 
-/// The ⌘, settings window. Hardcoded categories for v1 (an editable rules UI is
-/// the planned v2 addition); what's tunable here is the where and the how-often.
+/// The ⌘, settings window. Tabs keep the (now substantial) folder + rule editors
+/// from crowding the basics.
 struct SettingsView: View {
     @Bindable var settings: PorterSettings
     let coordinator: SortCoordinator
@@ -15,11 +15,15 @@ struct SettingsView: View {
     var body: some View {
         TabView {
             general.tabItem { Label("General", systemImage: "gearshape") }
+            folders.tabItem { Label("Folders", systemImage: "folder") }
+            rules.tabItem { Label("Rules", systemImage: "list.bullet.rectangle") }
             about.tabItem { Label("About", systemImage: "info.circle") }
         }
-        .frame(width: 460)
+        .frame(width: 520, height: 520)
         .padding(20)
     }
+
+    // MARK: - General
 
     private var general: some View {
         Form {
@@ -27,8 +31,7 @@ struct SettingsView: View {
                 Toggle("Launch Porter at login", isOn: launchAtLoginBinding)
                 if loginItem.state == .requiresApproval {
                     Text("Approve Porter in System Settings ▸ General ▸ Login Items.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .font(.caption).foregroundStyle(.secondary)
                 }
             }
 
@@ -36,16 +39,8 @@ struct SettingsView: View {
                 Toggle("Show icon in the menu bar", isOn: $settings.menuBarEnabled)
             }
 
-            Section("Folders") {
-                folderRow(label: "Watch", path: $settings.sourcePath) {
-                    coordinator.reconfigure()
-                }
-                folderRow(label: "File to", path: $settings.nasMountPath) {
-                    coordinator.sortNow()
-                }
-            }
-
-            Section("Mounting") {
+            Section("NAS") {
+                folderRow(label: "File to", path: $settings.nasMountPath) { coordinator.sortNow() }
                 TextField("SMB URL", text: $settings.smbURL,
                           prompt: Text("smb://user@host/share — optional, for “Mount Now”"))
                     .textFieldStyle(.roundedBorder)
@@ -56,8 +51,7 @@ struct SettingsView: View {
                     Text("Wait \(Int(settings.settleSeconds))s before moving a new file")
                     Slider(value: $settings.settleSeconds, in: 5...120, step: 5)
                     Text("Protects against grabbing a download that's still being written.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .font(.caption).foregroundStyle(.secondary)
                 }
             }
 
@@ -92,38 +86,59 @@ struct SettingsView: View {
         .onAppear { loginItem.refresh() }
     }
 
+    // MARK: - Folders
+
+    private var folders: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Folders Porter watches. Each can sort by your rules, or send everything to one NAS folder.")
+                    .font(.callout).foregroundStyle(.secondary)
+                FoldersEditor(settings: settings)
+            }
+            .padding(4)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        // Re-point the FSEvents watcher whenever the set of folders changes.
+        .onChange(of: settings.sources) { coordinator.reconfigure() }
+    }
+
+    // MARK: - Rules
+
+    private var rules: some View {
+        ScrollView {
+            RulesEditor(settings: settings)
+                .padding(4)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    // MARK: - About
+
     private var about: some View {
         VStack(spacing: 8) {
             Image(systemName: "tray.and.arrow.down.fill")
-                .font(.system(size: 44))
-                .foregroundStyle(.tint)
+                .font(.system(size: 44)).foregroundStyle(.tint)
             Text(Channel.current.displayName).font(.title2).bold()
             Text("Version \(versionString)").font(.caption).foregroundStyle(.secondary)
             if let info = Channel.buildInfo {
                 Text(info).font(.caption2).foregroundStyle(.tertiary)
             }
-            Text("Syntax Lab Technology · rafay99.com")
-                .font(.caption).foregroundStyle(.secondary)
-            Text("Licensed under GPL-3.0")
-                .font(.caption2).foregroundStyle(.tertiary)
+            Text("Syntax Lab Technology · rafay99.com").font(.caption).foregroundStyle(.secondary)
+            Text("Licensed under GPL-3.0").font(.caption2).foregroundStyle(.tertiary)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 24)
+        .frame(maxWidth: .infinity).padding(.vertical, 24)
     }
 
     // MARK: - Helpers
 
     private var launchAtLoginBinding: Binding<Bool> {
-        Binding(get: { loginItem.isEnabled },
-                set: { loginItem.setEnabled($0) })
+        Binding(get: { loginItem.isEnabled }, set: { loginItem.setEnabled($0) })
     }
 
     private func folderRow(label: String, path: Binding<String>, onChange: @escaping () -> Void) -> some View {
         HStack {
             Text(label).frame(width: 56, alignment: .leading)
-            TextField("", text: path)
-                .textFieldStyle(.roundedBorder)
-                .truncationMode(.head)
+            TextField("", text: path).textFieldStyle(.roundedBorder).truncationMode(.head)
             Button("Choose…") {
                 if let picked = chooseFolderPath(start: path.wrappedValue) {
                     path.wrappedValue = picked

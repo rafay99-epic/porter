@@ -14,6 +14,29 @@ func chooseFolderPath(start: String) -> String? {
     return panel.runModal() == .OK ? panel.url?.path : nil
 }
 
+/// Pick a destination folder *inside* the mounted NAS and return it as a path
+/// relative to `nasRoot` (what `Mover` expects). The panel is rooted at the NAS
+/// mount and can create new folders. Picking the root returns "" (files land at
+/// the NAS root); a folder outside the NAS falls back to its own name.
+@MainActor
+func chooseNASFolder(nasRoot: String) -> String? {
+    let panel = NSOpenPanel()
+    panel.canChooseDirectories = true
+    panel.canChooseFiles = false
+    panel.canCreateDirectories = true
+    panel.allowsMultipleSelection = false
+    panel.prompt = "Choose"
+    panel.message = "Pick a folder on your NAS for these files"
+    panel.directoryURL = URL(fileURLWithPath: nasRoot)
+    guard panel.runModal() == .OK, let url = panel.url else { return nil }
+
+    let picked = url.standardizedFileURL.path
+    let root = URL(fileURLWithPath: nasRoot).standardizedFileURL.path
+    if picked == root { return "" }
+    if picked.hasPrefix(root + "/") { return String(picked.dropFirst(root.count + 1)) }
+    return url.lastPathComponent
+}
+
 /// Best-effort mount point for an `smb://user@host/share` URL: macOS mounts it at
 /// `/Volumes/<share>`. Returns nil when the URL has no share component.
 func defaultMountPoint(forSMB url: String) -> String? {
@@ -145,7 +168,7 @@ struct ActivityRow: View {
 
     private var iconName: String {
         if entry.isFailure { return "exclamationmark.triangle" }
-        return entry.category?.symbolName ?? "doc"
+        return entry.destination.map { FileCategory.symbol(forFolder: $0) } ?? "doc"
     }
 
     private var detail: String {

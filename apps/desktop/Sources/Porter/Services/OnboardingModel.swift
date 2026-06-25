@@ -9,14 +9,16 @@ import PorterCore
 @Observable
 final class OnboardingModel {
     enum Step: Int, CaseIterable {
-        case welcome, source, access, nas, login, menuBar, done
+        // Order matters: mount the NAS first (so picking "send all to" folders works),
+        // then file access, then choose folders, then the run/menu-bar prefs.
+        case welcome, nas, access, source, login, menuBar, done
 
         var title: String {
             switch self {
             case .welcome: return "Welcome to Porter"
-            case .source:  return "Choose a Folder to Watch"
-            case .access:  return "Allow File Access"
             case .nas:     return "Connect Your NAS"
+            case .access:  return "Allow File Access"
+            case .source:  return "Choose Folders to Watch"
             case .login:   return "Run Automatically"
             case .menuBar: return "Menu Bar"
             case .done:    return "You're All Set"

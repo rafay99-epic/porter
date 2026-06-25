@@ -95,7 +95,7 @@ final class SortCoordinator {
         guard !started else { return }
         started = true
         FileLog.shared.pruneOldLogs()
-        log.info("\(Channel.current.displayName) launched — watching \(settings.sourcePath), filing to \(settings.nasMountPath)")
+        log.info("\(Channel.current.displayName) launched — watching \(settings.activeSourceURLs.count) folder(s), filing to \(settings.nasMountPath)")
         observeVolumeChanges()
         startWatching()
         startHeartbeat()
@@ -118,16 +118,18 @@ final class SortCoordinator {
 
     private func startWatching() {
         watcher?.stop()
-        let w = FolderWatcher(folder: settings.sourceURL, queue: watcherQueue) { [weak self] paths in
+        let folders = settings.activeSourceURLs
+        let w = FolderWatcher(folders: folders, queue: watcherQueue) { [weak self] paths in
             Task { @MainActor in self?.fileSystemChanged(paths) }
         }
         w.start()
         watcher = w
-        log.info("watching \(settings.sourcePath)")
+        let names = folders.map(\.lastPathComponent).joined(separator: ", ")
+        log.info("watching \(folders.count) folder(s): \(names.isEmpty ? "(none)" : names)")
     }
 
     private func fileSystemChanged(_ paths: [String] = []) {
-        log.debug("fsevent: \(paths.count) path(s) changed in \(settings.sourcePath)")
+        log.debug("fsevent: \(paths.count) path(s) changed")
         // Debounce a burst of events into one sweep ~1s later. The per-file settle
         // check still protects against grabbing a download that's mid-write.
         let delay = max(0.1, settings.debounceSeconds)
@@ -178,9 +180,10 @@ final class SortCoordinator {
         // the Downloads TCC prompt on first launch, and it surfaces a missing grant
         // even while the share is offline (a paused-but-also-unreadable app would
         // otherwise hide the real blocker behind "NAS not mounted").
-        guard Permissions.canRead(settings.sourceURL) else {
+        // Permission: if any enabled source can't be read (TCC), surface it.
+        if let blocked = settings.activeSourceURLs.first(where: { !Permissions.canRead($0) }) {
             if status != .needsPermission {
-                log.error("cannot read \(settings.sourcePath) — grant Porter access to that folder (or Full Disk Access) in System Settings")
+                log.error("cannot read \(blocked.path) — grant Porter access to that folder (or Full Disk Access) in System Settings")
             }
             status = .needsPermission
             return
@@ -194,7 +197,8 @@ final class SortCoordinator {
         isSweeping = true
         status = .syncing
         progress = nil
-        let sources = [settings.sourceURL]
+        let sources = settings.sources
+        let rules = settings.rules
         let nasRoot = settings.nasURL
         let settle = settings.settleSeconds
         // Capture self strongly: it's a @MainActor (Sendable) object and the task is
@@ -202,7 +206,7 @@ final class SortCoordinator {
         // hop back to the main actor to publish progress.
         let coordinator = self
         let summary = await Task.detached(priority: .utility) {
-            Sorter(sources: sources, nasRoot: nasRoot, settleSeconds: settle).sweep { completed, total in
+            Sorter(sources: sources, rules: rules, nasRoot: nasRoot, settleSeconds: settle).sweep { completed, total in
                 Task { @MainActor in
                     coordinator.progress = total > 0 ? SortProgress(completed: completed, total: total) : nil
                 }
@@ -233,7 +237,12 @@ final class SortCoordinator {
             }
         }
 
-        if summary.readDenied {
+        if summary.nasLost {
+            // The share vanished mid-sweep — pause; the mount observer / heartbeat
+            // resumes when it's back.
+            nasMounted = false
+            status = .paused
+        } else if summary.readDenied {
             status = .needsPermission
         } else if summary.failed > 0 {
             status = .error("\(summary.failed) move\(summary.failed == 1 ? "" : "s") failed")
