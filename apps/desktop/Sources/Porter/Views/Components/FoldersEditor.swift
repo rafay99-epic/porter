@@ -1,31 +1,33 @@
 import SwiftUI
 import PorterCore
 
-/// Add / remove / enable watched folders and choose each folder's routing
-/// (sort-by-rules, or send everything to one fixed NAS folder). Shared by the
-/// onboarding folder step and Settings.
+/// Add / remove / enable watched folders and choose each folder's routing.
+/// Each folder is one clean card: a switch, the folder, a one-line routing
+/// summary, and a routing menu (which opens the NAS picker on demand) — no
+/// segmented controls or inline text fields cluttering the row.
 struct FoldersEditor: View {
     @Bindable var settings: PorterSettings
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            if settings.sources.isEmpty {
-                Text("No folders yet — add one to start watching.")
-                    .font(.caption).foregroundStyle(.secondary)
-            }
+        VStack(alignment: .leading, spacing: 10) {
             ForEach($settings.sources) { $source in
-                SourceRow(source: $source, nasRoot: settings.nasMountPath) { remove(source) }
-                Divider()
+                FolderCard(source: $source, nasRoot: settings.nasMountPath) { remove(source) }
             }
-            Button { addFolder() } label: { Label("Add Folder…", systemImage: "plus.circle") }
-                .buttonStyle(.borderless)
+
+            Button { addFolder() } label: {
+                Label("Add a Folder", systemImage: "plus.circle.fill")
+                    .font(.callout)
+            }
+            .buttonStyle(.borderless)
+            .padding(.top, 2)
         }
     }
 
     private func addFolder() {
         let home = FileManager.default.homeDirectoryForCurrentUser.path
         guard let path = chooseFolderPath(start: home) else { return }
-        guard !settings.sources.contains(where: { $0.url.standardizedFileURL.path == URL(fileURLWithPath: path).standardizedFileURL.path }) else { return }
+        let std = URL(fileURLWithPath: path).standardizedFileURL.path
+        guard !settings.sources.contains(where: { $0.url.standardizedFileURL.path == std }) else { return }
         settings.sources.append(WatchSource(path: path, routing: .classify))
     }
 
@@ -34,62 +36,80 @@ struct FoldersEditor: View {
     }
 }
 
-private struct SourceRow: View {
+private struct FolderCard: View {
     @Binding var source: WatchSource
     let nasRoot: String
     let onRemove: () -> Void
 
-    private enum RoutingKind { case classify, fixed }
-
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 10) {
-                Toggle("", isOn: $source.enabled).labelsHidden()
-                Image(systemName: "folder.fill").foregroundStyle(.secondary)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(source.name).font(.body)
-                    Text(source.path).font(.caption2).foregroundStyle(.secondary)
-                        .lineLimit(1).truncationMode(.middle)
-                }
-                Spacer()
-                Button(role: .destructive, action: onRemove) {
-                    Image(systemName: "trash")
-                }
-                .buttonStyle(.borderless)
+        HStack(spacing: 12) {
+            Toggle("", isOn: $source.enabled)
+                .labelsHidden().toggleStyle(.switch).controlSize(.mini)
+
+            Image(systemName: "folder.fill")
+                .foregroundStyle(source.enabled ? Color.accentColor : .secondary)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(source.name).fontWeight(.medium)
+                Text(routingSummary)
+                    .font(.caption).foregroundStyle(.secondary)
+                    .lineLimit(1).truncationMode(.middle)
             }
-            HStack(spacing: 8) {
-                Picker("Routing", selection: routingKind) {
-                    Text("Sort by rules").tag(RoutingKind.classify)
-                    Text("Send all to…").tag(RoutingKind.fixed)
+
+            Spacer()
+
+            Menu {
+                Button { source.routing = .classify } label: {
+                    Label("Sort by rules", systemImage: isClassify ? "checkmark" : "list.bullet")
                 }
-                .pickerStyle(.segmented).labelsHidden().fixedSize()
-                if routingKind.wrappedValue == .fixed {
-                    TextField("NAS folder", text: fixedFolder).textFieldStyle(.roundedBorder)
-                    Button("Choose…") {
-                        if let picked = chooseNASFolder(nasRoot: nasRoot) { fixedFolder.wrappedValue = picked }
-                    }
+                Button { chooseFixedFolder() } label: {
+                    Label("Send everything to a NAS folder…",
+                          systemImage: isClassify ? "tray.full" : "checkmark")
                 }
+            } label: {
+                Label("Routing", systemImage: "slider.horizontal.3")
             }
-            .disabled(!source.enabled)
+            .menuStyle(.borderlessButton)
+            .fixedSize()
+
+            Button(role: .destructive, action: onRemove) {
+                Image(systemName: "minus.circle")
+            }
+            .buttonStyle(.borderless)
         }
-        .padding(.vertical, 2)
+        .padding(12)
+        .background(.quaternary.opacity(0.3), in: RoundedRectangle(cornerRadius: 10))
+        .opacity(source.enabled ? 1 : 0.55)
     }
 
-    private var routingKind: Binding<RoutingKind> {
-        Binding(
-            get: { if case .fixed = source.routing { return .fixed }; return .classify },
-            set: { kind in
-                switch kind {
-                case .classify: source.routing = .classify
-                case .fixed:
-                    if case .fixed = source.routing { } else { source.routing = .fixed(folder: "") }
-                }
-            })
+    private var isClassify: Bool {
+        if case .classify = source.routing { return true }
+        return false
     }
 
-    private var fixedFolder: Binding<String> {
-        Binding(
-            get: { if case .fixed(let folder) = source.routing { return folder }; return "" },
-            set: { source.routing = .fixed(folder: $0) })
+    /// One-line description of where this folder's files go.
+    private var routingSummary: String {
+        switch source.routing {
+        case .classify:
+            return "\(abbreviate(source.path)) · sorted by rules"
+        case .fixed(let folder):
+            return folder.isEmpty
+                ? "\(abbreviate(source.path)) · choose a NAS folder"
+                : "\(abbreviate(source.path)) · all files → \(folder)"
+        }
+    }
+
+    private func chooseFixedFolder() {
+        if let picked = chooseNASFolder(nasRoot: nasRoot) {
+            source.routing = .fixed(folder: picked)
+        } else if isClassify {
+            // They opened the picker but cancelled — leave routing as-is.
+        }
+    }
+
+    /// `/Users/me/Downloads` → `~/Downloads` for a calmer display.
+    private func abbreviate(_ path: String) -> String {
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        return path.hasPrefix(home) ? "~" + path.dropFirst(home.count) : path
     }
 }

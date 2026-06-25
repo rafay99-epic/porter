@@ -179,18 +179,22 @@ private struct SourceStep: View {
     @Bindable var settings: PorterSettings
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("Pick the folders Porter should watch. New files in them get filed onto your NAS. Add as many as you like — Downloads, Pictures, a code dir, anything. Each folder can sort by rules or send everything to one NAS folder.")
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Which folders should Porter watch? New files in them get filed onto your NAS. Downloads is ready to go — add more if you like.")
                 .foregroundStyle(.secondary)
 
             FoldersEditor(settings: settings)
 
             Divider()
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Wait \(Int(settings.settleSeconds))s after a file appears before filing it")
-                    .font(.callout)
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text("Wait before filing a new file").font(.callout)
+                    Spacer()
+                    Text("\(Int(settings.settleSeconds))s")
+                        .font(.callout).monospacedDigit().foregroundStyle(.secondary)
+                }
                 Slider(value: $settings.settleSeconds, in: 5...120, step: 5)
-                Text("A short wait avoids grabbing a download that's still in progress. You can change this and the sorting rules any time in Settings.")
+                Text("A short wait avoids grabbing a download that's still in progress. Change folders, rules, and timing any time in Settings.")
                     .font(.caption).foregroundStyle(.secondary)
             }
         }
