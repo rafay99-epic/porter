@@ -47,6 +47,28 @@ public enum RuleMatch: Codable, Equatable, Sendable {
     }
 }
 
+/// What to do when a file with the same name already exists at the destination.
+/// Per-rule, so e.g. an "Installers" rule can overwrite stale copies while
+/// documents are kept side by side with a ` (1)` suffix.
+public enum ConflictPolicy: String, Codable, CaseIterable, Identifiable, Sendable, Equatable {
+    case rename      // keep both — add a Finder-style " (1)" suffix (the default)
+    case skip        // leave the file in place, don't move it
+    case overwrite   // replace whatever is already at the destination
+    case keepNewer   // overwrite only if the incoming file is newer, else skip
+
+    public var id: String { rawValue }
+
+    /// Label for the rule editor picker.
+    public var label: String {
+        switch self {
+        case .rename:    return "Keep both (rename)"
+        case .skip:      return "Skip"
+        case .overwrite: return "Overwrite"
+        case .keepNewer: return "Keep newer"
+        }
+    }
+}
+
 /// One sorting rule: if `match` applies (and the rule is enabled), the file is
 /// filed into `<NAS>/<destination>`. Rules are evaluated in list order; first
 /// match wins. The list should end with an `.anything` rule as a safety net.
@@ -56,12 +78,32 @@ public struct SortRule: Codable, Identifiable, Equatable, Sendable {
     public var match: RuleMatch
     /// Destination folder under the NAS root. May be nested ("Documents/Invoices").
     public var destination: String
+    /// How to resolve a name clash at the destination.
+    public var conflictPolicy: ConflictPolicy
 
-    public init(id: UUID = UUID(), enabled: Bool = true, match: RuleMatch, destination: String) {
+    public init(id: UUID = UUID(), enabled: Bool = true, match: RuleMatch,
+                destination: String, conflictPolicy: ConflictPolicy = .rename) {
         self.id = id
         self.enabled = enabled
         self.match = match
         self.destination = destination
+        self.conflictPolicy = conflictPolicy
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, enabled, match, destination, conflictPolicy
+    }
+
+    /// Lenient decode: every field has a fallback so adding a new key (like
+    /// `conflictPolicy`) never invalidates an existing settings.json — old rules
+    /// keep working with sensible defaults rather than the whole list resetting.
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        enabled = try c.decodeIfPresent(Bool.self, forKey: .enabled) ?? true
+        match = try c.decode(RuleMatch.self, forKey: .match)
+        destination = try c.decode(String.self, forKey: .destination)
+        conflictPolicy = try c.decodeIfPresent(ConflictPolicy.self, forKey: .conflictPolicy) ?? .rename
     }
 }
 

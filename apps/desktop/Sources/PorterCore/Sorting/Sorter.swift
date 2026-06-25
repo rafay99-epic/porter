@@ -79,12 +79,16 @@ public struct Sorter: Sendable {
         onProgress?(0, total)
         for (index, item) in eligible.enumerated() {
             do {
-                let dest = try mover.move(item.url, to: item.destination)
+                let dest = try mover.move(item.url, to: item.destination, policy: item.policy)
                 summary.moved += 1
                 summary.entries.append(ActivityEntry(
                     date: now, fileName: item.name, destination: item.destination,
                     outcome: .moved(folder: dest.deletingLastPathComponent().lastPathComponent),
                     sourcePath: item.url.path, finalPath: dest.path))
+            } catch Mover.MoveError.skippedExisting {
+                // Conflict policy (skip / keep-newer) chose to leave it in place —
+                // a silent skip, exactly like a junk/partial skip. Not a failure.
+                summary.skipped += 1
             } catch let Mover.MoveError.sourceNotRemoved(destination) {
                 summary.failed += 1
                 summary.entries.append(ActivityEntry(
@@ -162,18 +166,26 @@ public struct Sorter: Sendable {
                 if !FileTriage.isSettled(modified: modified, now: now, seconds: settleSeconds) {
                     result.skipped += 1; continue
                 }
-                let destination = route(name, with: source.routing)
-                result.files.append(EligibleFile(url: url, name: name, destination: destination))
+                let routed = routing(for: name, source: source)
+                result.files.append(EligibleFile(url: url, name: name,
+                                                 destination: routed.destination, policy: routed.policy))
             }
         }
         return result
     }
 
-    /// Destination for `name` under this source's routing.
-    private func route(_ name: String, with routing: WatchSource.Routing) -> String {
-        switch routing {
-        case .fixed(let folder): return folder
-        case .classify:          return RuleEngine.destination(for: name, using: rules)
+    /// Destination + conflict policy for `name` under this source's routing. A
+    /// fixed source has no rule, so it keeps both copies (`.rename`) — the safe
+    /// default; classify sources inherit the winning rule's policy.
+    private func routing(for name: String, source: WatchSource) -> (destination: String, policy: ConflictPolicy) {
+        switch source.routing {
+        case .fixed(let folder):
+            return (folder, .rename)
+        case .classify:
+            if let rule = RuleEngine.firstMatch(for: name, using: rules) {
+                return (rule.destination, rule.conflictPolicy)
+            }
+            return ("Other", .rename)
         }
     }
 
@@ -182,6 +194,7 @@ public struct Sorter: Sendable {
         let url: URL
         let name: String
         let destination: String
+        let policy: ConflictPolicy
     }
 
     private func describe(_ error: Error) -> String {

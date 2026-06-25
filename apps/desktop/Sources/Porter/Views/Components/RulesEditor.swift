@@ -141,6 +141,7 @@ private struct RuleEditorSheet: View {
     @State private var text: String
     @State private var extensionsText: String
     @State private var destination: String
+    @State private var policy: ConflictPolicy
     let onSave: (SortRule) -> Void
 
     private enum Kind: String, CaseIterable, Identifiable {
@@ -167,6 +168,7 @@ private struct RuleEditorSheet: View {
         case .anything:             _kind = State(initialValue: .anything); _text = State(initialValue: ""); _extensionsText = State(initialValue: "")
         }
         _destination = State(initialValue: rule.destination)
+        _policy = State(initialValue: rule.conflictPolicy)
     }
 
     var body: some View {
@@ -192,6 +194,10 @@ private struct RuleEditorSheet: View {
                     if let picked = chooseNASFolder(nasRoot: nasRoot) { destination = picked }
                 }
             }
+            Picker("If a file already exists", selection: $policy) {
+                ForEach(ConflictPolicy.allCases) { Text($0.label).tag($0) }
+            }
+            Text(policyHelp).font(.caption).foregroundStyle(.secondary)
             HStack {
                 Button("Cancel") { dismiss() }
                 Spacer()
@@ -202,6 +208,15 @@ private struct RuleEditorSheet: View {
         }
         .padding(20)
         .frame(width: 420)
+    }
+
+    private var policyHelp: String {
+        switch policy {
+        case .rename:    return "Keep both — the new file gets a “ (1)” suffix. Nothing is overwritten."
+        case .skip:      return "Leave the new file in its watched folder and don't move it."
+        case .overwrite: return "Replace the file already on the NAS with the new one."
+        case .keepNewer: return "Overwrite only if the new file is more recent, otherwise skip it."
+        }
     }
 
     private var placeholder: String {
@@ -230,7 +245,8 @@ private struct RuleEditorSheet: View {
         case .anything: match = .anything
         }
         onSave(SortRule(id: id, enabled: enabled, match: match,
-                        destination: destination.trimmingCharacters(in: .whitespaces)))
+                        destination: destination.trimmingCharacters(in: .whitespaces),
+                        conflictPolicy: policy))
         dismiss()
     }
 }
