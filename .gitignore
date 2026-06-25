@@ -11,3 +11,9 @@ apps/desktop/Resources/AppIcon*.icns
 # Editor
 .vscode/
 .idea/
+
+# JS / Turborepo workspace
+node_modules/
+.turbo/
+apps/web/dist/
+**/*.tsbuildinfo
