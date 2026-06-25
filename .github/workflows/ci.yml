@@ -5,6 +5,7 @@ name: CI
 # release builds + publishes only after both pass; on PRs the DMG builds + uploads
 # as an artifact instead.
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     paths:

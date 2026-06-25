@@ -6,6 +6,7 @@ name: Nightly
 # "build <n>" — the Nightly updater parses it to order pre-releases (the tag is
 # reused, so the version string can't).
 on:
+  workflow_dispatch:
   push:
     branches: [nightly]
     paths:
