@@ -10,18 +10,20 @@ import PorterCore
 final class OnboardingModel {
     enum Step: Int, CaseIterable {
         // Order matters: mount the NAS first (so picking "send all to" folders works),
-        // then file access, then choose folders, then the run/menu-bar prefs.
-        case welcome, nas, access, source, login, menuBar, done
+        // then file access, then choose folders, then the run/menu-bar prefs, then a
+        // tour of what Porter can do.
+        case welcome, nas, access, source, login, menuBar, features, done
 
         var title: String {
             switch self {
-            case .welcome: return "Welcome to Porter"
-            case .nas:     return "Connect Your NAS"
-            case .access:  return "Allow File Access"
-            case .source:  return "Choose Folders to Watch"
-            case .login:   return "Run Automatically"
-            case .menuBar: return "Menu Bar"
-            case .done:    return "You're All Set"
+            case .welcome:  return "Welcome to Porter"
+            case .nas:      return "Connect Your NAS"
+            case .access:   return "Allow File Access"
+            case .source:   return "Choose Folders to Watch"
+            case .login:    return "Run Automatically"
+            case .menuBar:  return "Menu Bar"
+            case .features: return "What Porter Can Do"
+            case .done:     return "You're All Set"
             }
         }
     }

@@ -81,6 +81,12 @@ public enum Channel: String, Sendable {
         dataDirectory.appendingPathComponent("config", isDirectory: true)
     }
 
+    /// Where the persisted move history for the stats dashboard lives
+    /// (`~/.porter*/stats/`).
+    public var statsDirectory: URL {
+        dataDirectory.appendingPathComponent("stats", isDirectory: true)
+    }
+
     /// Stable tracks the latest full release; Nightly tracks the newest
     /// pre-release. (Dev tracks nothing — see `updatesEnabled`.)
     public var isPrerelease: Bool { self == .nightly }

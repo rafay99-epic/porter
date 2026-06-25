@@ -10,6 +10,8 @@ struct MenuContent: View {
     @Bindable var loginItem: LoginItem
     @Bindable var updater: Updater
     @Environment(\.openWindow) private var openWindow
+    @State private var showingPreview = false
+    @State private var showingStats = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -26,7 +28,7 @@ struct MenuContent: View {
                 updateCallout(release)
             }
 
-            ActivityListView(entries: coordinator.activity)
+            ActivityListView(entries: coordinator.activity, onUndo: { coordinator.undo($0) })
 
             Divider()
             footer
@@ -75,14 +77,29 @@ struct MenuContent: View {
     }
 
     private var footer: some View {
-        HStack(spacing: 12) {
-            Button("Sort Now") { coordinator.sortNow() }
+        HStack(spacing: 10) {
+            // Primary action mirrors the dashboard: Resume when paused, else Sort
+            // Now. Pause/Resume is right here in the menu bar, not buried in a submenu.
+            if coordinator.isPaused {
+                Button { coordinator.setPaused(false) } label: {
+                    Label("Resume", systemImage: "play.fill")
+                }
+                .buttonStyle(.borderedProminent)
+            } else {
+                Button("Sort Now") { coordinator.sortNow() }
+                Button { coordinator.setPaused(true) } label: {
+                    Image(systemName: "pause.fill")
+                }
+                .help("Pause sorting")
+            }
             Spacer()
-            Button("Open Porter") {
+            Button("Open") {
                 openWindow(id: "main")
                 NSApp.activate(ignoringOtherApps: true)
             }
             Menu {
+                Button("Preview Sort…") { showingPreview = true }
+                Button("Statistics…") { showingStats = true }
                 SettingsLink { Text("Settings…") }
                 Button("Reveal Log in Finder") { coordinator.revealLogInFinder() }
                 Divider()
@@ -94,5 +111,7 @@ struct MenuContent: View {
             .fixedSize()
         }
         .padding(12)
+        .sheet(isPresented: $showingPreview) { PreviewSheet(coordinator: coordinator) }
+        .sheet(isPresented: $showingStats) { StatsView(coordinator: coordinator) }
     }
 }

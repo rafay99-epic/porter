@@ -31,6 +31,16 @@ final class PorterSettings {
     var menuBarEnabled: Bool { didSet { save() } }
     /// Whether to check for updates automatically at launch.
     var autoCheckUpdates: Bool { didSet { save() } }
+    /// Whether to post a native notification after each sweep (sorted / failed).
+    var notificationsEnabled: Bool { didSet { save() } }
+    /// Global pause — when true, no sweeps run until the user resumes.
+    var paused: Bool { didSet { save() } }
+    /// A daily window during which sorting is suspended.
+    var quietHours: QuietHours { didSet { save() } }
+    /// Drop a file when a byte-identical copy already exists at the destination.
+    var deduplicate: Bool { didSet { save() } }
+    /// Re-hash each NAS copy before removing the source (integrity check).
+    var verifyAfterCopy: Bool { didSet { save() } }
 
     private let fileURL: URL
     private let log = AppInfo.logger("settings")
@@ -47,6 +57,11 @@ final class PorterSettings {
         var debounceSeconds: Double?
         var menuBarEnabled: Bool?
         var autoCheckUpdates: Bool?
+        var notificationsEnabled: Bool?
+        var paused: Bool?
+        var quietHours: QuietHours?
+        var deduplicate: Bool?
+        var verifyAfterCopy: Bool?
     }
 
     init() {
@@ -72,6 +87,11 @@ final class PorterSettings {
         debounceSeconds = stored?.debounceSeconds ?? 1
         menuBarEnabled = stored?.menuBarEnabled ?? true
         autoCheckUpdates = stored?.autoCheckUpdates ?? true
+        notificationsEnabled = stored?.notificationsEnabled ?? true
+        paused = stored?.paused ?? false
+        quietHours = stored?.quietHours ?? QuietHours()
+        deduplicate = stored?.deduplicate ?? false
+        verifyAfterCopy = stored?.verifyAfterCopy ?? false
     }
 
     var nasURL: URL { URL(fileURLWithPath: nasMountPath) }
@@ -105,7 +125,9 @@ final class PorterSettings {
             nasMountPath: nasMountPath, smbURL: smbURL,
             settleSeconds: settleSeconds, heartbeatSeconds: heartbeatSeconds,
             debounceSeconds: debounceSeconds, menuBarEnabled: menuBarEnabled,
-            autoCheckUpdates: autoCheckUpdates)
+            autoCheckUpdates: autoCheckUpdates, notificationsEnabled: notificationsEnabled,
+            paused: paused, quietHours: quietHours,
+            deduplicate: deduplicate, verifyAfterCopy: verifyAfterCopy)
         do {
             try FileManager.default.createDirectory(
                 at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true)

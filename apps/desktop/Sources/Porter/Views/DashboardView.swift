@@ -8,6 +8,8 @@ struct DashboardView: View {
     @Bindable var coordinator: SortCoordinator
     @Bindable var loginItem: LoginItem
     @Bindable var updater: Updater
+    @State private var showingPreview = false
+    @State private var showingStats = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -17,13 +19,13 @@ struct DashboardView: View {
             }
 
             hero
-                .padding(.top, 24)
-                .padding(.bottom, 16)
+                .padding(.top, 22)
+                .padding(.bottom, 14)
                 .padding(.horizontal, 24)
 
             watchingCard
                 .padding(.horizontal, 24)
-                .padding(.bottom, 16)
+                .padding(.bottom, 14)
 
             stateCallout
                 .padding(.horizontal, 24)
@@ -39,12 +41,15 @@ struct DashboardView: View {
             }
             .padding(.horizontal, 24).padding(.vertical, 10)
 
-            ActivityListView(entries: coordinator.activity, maxHeight: .infinity)
+            // Finite cap (not .infinity) so the window hugs its content — short and
+            // tidy when paused/empty, scrolling once there's a real backlog.
+            ActivityListView(entries: coordinator.activity, maxHeight: 300,
+                             onUndo: { coordinator.undo($0) })
 
             Divider()
             footer
         }
-        .frame(minWidth: 460, minHeight: 560)
+        .frame(width: 540)
     }
 
     // MARK: - Hero
@@ -147,9 +152,29 @@ struct DashboardView: View {
         case .paused:
             callout(text: "The NAS isn't mounted, so sorting is paused. Files stay put until it's back.",
                     button: "Mount Now", prominent: false) { coordinator.mountNow() }
+        case .suspended:
+            if coordinator.isPaused {
+                callout(text: "Sorting is paused. New files stay in your watched folders until you resume.",
+                        button: "Resume Sorting", prominent: true) { coordinator.setPaused(false) }
+            } else {
+                infoCallout(text: "Quiet hours are on — sorting resumes at \(coordinator.settings.quietHours.endLabel).")
+            }
         default:
             EmptyView()
         }
+    }
+
+    /// A non-actionable informational banner (used for quiet hours).
+    private func infoCallout(text: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: "moon.zzz").foregroundStyle(.secondary)
+            Text(text).font(.callout).foregroundStyle(.secondary)
+            Spacer()
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 10))
+        .padding(.bottom, 12)
     }
 
     // MARK: - Banner / callout / footer
@@ -193,13 +218,36 @@ struct DashboardView: View {
     }
 
     private var footer: some View {
-        HStack(spacing: 12) {
-            Button("Sort Now") { coordinator.sortNow() }
+        HStack(spacing: 8) {
+            // Primary action follows the state: Resume when paused, otherwise Sort
+            // Now (with a Pause beside it). Avoids a disabled "Sort Now" that does
+            // nothing while paused.
+            if coordinator.isPaused {
+                Button { coordinator.setPaused(false) } label: {
+                    Label("Resume", systemImage: "play.fill")
+                }
                 .buttonStyle(.borderedProminent)
-            Button("Reveal Log") { coordinator.revealLogInFinder() }
+            } else {
+                Button { coordinator.sortNow() } label: {
+                    Label("Sort Now", systemImage: "arrow.triangle.2.circlepath")
+                }
+                .buttonStyle(.borderedProminent)
+                Button { coordinator.setPaused(true) } label: {
+                    Label("Pause", systemImage: "pause.fill")
+                }
+            }
+            Button { showingPreview = true } label: { Label("Preview", systemImage: "eye") }
+            Button { showingStats = true } label: { Label("Stats", systemImage: "chart.bar") }
+
             Spacer()
-            SettingsLink { Text("Settings…") }
+
+            SettingsLink { Label("Settings", systemImage: "gearshape") }
         }
+        .buttonStyle(.bordered)
+        .controlSize(.regular)
+        .labelStyle(.titleAndIcon)
         .padding(16)
+        .sheet(isPresented: $showingPreview) { PreviewSheet(coordinator: coordinator) }
+        .sheet(isPresented: $showingStats) { StatsView(coordinator: coordinator) }
     }
 }

@@ -37,6 +37,10 @@ struct SettingsView: View {
 
             Section("Display") {
                 Toggle("Show icon in the menu bar", isOn: $settings.menuBarEnabled)
+                Toggle("Notify me when files are sorted", isOn: $settings.notificationsEnabled)
+                    .onChange(of: settings.notificationsEnabled) { _, enabled in
+                        if enabled { coordinator.enableNotifications() }
+                    }
             }
 
             Section("NAS") {
@@ -51,6 +55,23 @@ struct SettingsView: View {
                     Text("Wait \(Int(settings.settleSeconds))s before moving a new file")
                     Slider(value: $settings.settleSeconds, in: 5...120, step: 5)
                     Text("Protects against grabbing a download that's still being written.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+
+            Section("Integrity") {
+                Toggle("Skip duplicates already on the NAS", isOn: $settings.deduplicate)
+                Toggle("Verify each copy before deleting the original", isOn: $settings.verifyAfterCopy)
+                Text("Duplicate skipping drops a re-downloaded file when an identical copy is already filed. Verification re-hashes each copy on the NAS to catch corruption before the original is removed (slower, safest).")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
+            Section("Quiet Hours") {
+                Toggle("Don't sort during a daily window", isOn: $settings.quietHours.enabled)
+                if settings.quietHours.enabled {
+                    DatePicker("From", selection: quietStartBinding, displayedComponents: .hourAndMinute)
+                    DatePicker("Until", selection: quietEndBinding, displayedComponents: .hourAndMinute)
+                    Text("Sorting pauses inside this window and resumes automatically after it. Windows that cross midnight are fine.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
             }
@@ -106,7 +127,7 @@ struct SettingsView: View {
 
     private var rules: some View {
         ScrollView {
-            RulesEditor(settings: settings)
+            RulesEditor(settings: settings, recentActivity: coordinator.activity)
                 .padding(4)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -133,6 +154,26 @@ struct SettingsView: View {
 
     private var launchAtLoginBinding: Binding<Bool> {
         Binding(get: { loginItem.isEnabled }, set: { loginItem.setEnabled($0) })
+    }
+
+    // Quiet-hours are stored as minutes-since-midnight; the DatePicker works in
+    // Dates, so bridge through "today at HH:mm" in both directions.
+    private var quietStartBinding: Binding<Date> { minuteBinding(\.startMinute) }
+    private var quietEndBinding: Binding<Date> { minuteBinding(\.endMinute) }
+
+    private func minuteBinding(_ keyPath: WritableKeyPath<QuietHours, Int>) -> Binding<Date> {
+        Binding(
+            get: { Self.date(fromMinutes: settings.quietHours[keyPath: keyPath]) },
+            set: { settings.quietHours[keyPath: keyPath] = Self.minutes(from: $0) })
+    }
+
+    private static func date(fromMinutes minutes: Int) -> Date {
+        Calendar.current.date(bySettingHour: minutes / 60, minute: minutes % 60, second: 0, of: Date()) ?? Date()
+    }
+
+    private static func minutes(from date: Date) -> Int {
+        let c = Calendar.current.dateComponents([.hour, .minute], from: date)
+        return (c.hour ?? 0) * 60 + (c.minute ?? 0)
     }
 
     private func folderRow(label: String, path: Binding<String>, onChange: @escaping () -> Void) -> some View {

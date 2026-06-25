@@ -42,8 +42,10 @@ struct PorterApp: App {
                     updater.checkOnLaunch()
                 }
         }
-        .defaultSize(width: 540, height: 580)
-        .windowResizability(.contentMinSize)
+        // The dashboard and onboarding views set their own size; hug it so the
+        // window is exactly as tall as its content (no stretched empty space or
+        // clipped footer when the layout changes, e.g. when paused).
+        .windowResizability(.contentSize)
         .commands {
             CommandGroup(after: .appInfo) {
                 Button("Check for Updates…") {

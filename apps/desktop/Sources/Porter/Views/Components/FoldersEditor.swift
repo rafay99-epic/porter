@@ -66,6 +66,8 @@ private struct FolderCard: View {
                     Label("Send everything to a NAS folder…",
                           systemImage: isClassify ? "tray.full" : "checkmark")
                 }
+                Divider()
+                Toggle(isOn: $source.recursive) { Label("Include subfolders", systemImage: "folder.badge.gearshape") }
             } label: {
                 Label("Routing", systemImage: "slider.horizontal.3")
             }
@@ -89,13 +91,14 @@ private struct FolderCard: View {
 
     /// One-line description of where this folder's files go.
     private var routingSummary: String {
+        let suffix = source.recursive ? " · incl. subfolders" : ""
         switch source.routing {
         case .classify:
-            return "\(abbreviate(source.path)) · sorted by rules"
+            return "\(abbreviate(source.path)) · sorted by rules\(suffix)"
         case .fixed(let folder):
             return folder.isEmpty
-                ? "\(abbreviate(source.path)) · choose a NAS folder"
-                : "\(abbreviate(source.path)) · all files → \(folder)"
+                ? "\(abbreviate(source.path)) · choose a NAS folder\(suffix)"
+                : "\(abbreviate(source.path)) · all files → \(folder)\(suffix)"
         }
     }
 
