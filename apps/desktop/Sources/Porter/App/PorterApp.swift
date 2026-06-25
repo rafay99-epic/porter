@@ -76,10 +76,16 @@ private struct RootWindowView: View {
     let coordinator: SortCoordinator
     @Bindable var loginItem: LoginItem
     @Bindable var updater: Updater
+    @State private var showWhatsNew = false
 
     var body: some View {
         if onboarding.completed {
             DashboardView(coordinator: coordinator, loginItem: loginItem, updater: updater)
+                // Existing users (who won't re-run onboarding) get a one-time tour of
+                // the new features after an update.
+                .onAppear { showWhatsNew = WhatsNew.shouldShow() }
+                .sheet(isPresented: $showWhatsNew, onDismiss: { WhatsNew.markSeen() },
+                       content: { WhatsNewView() })
         } else {
             OnboardingView(onboarding: onboarding, settings: settings,
                            loginItem: loginItem, coordinator: coordinator)

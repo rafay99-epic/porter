@@ -11,6 +11,7 @@ struct SettingsView: View {
     @Bindable var onboarding: OnboardingModel
     @Bindable var updater: Updater
     @Environment(\.openWindow) private var openWindow
+    @State private var showWhatsNew = false
 
     var body: some View {
         TabView {
@@ -146,8 +147,11 @@ struct SettingsView: View {
             }
             Text("Syntax Lab Technology · rafay99.com").font(.caption).foregroundStyle(.secondary)
             Text("Licensed under GPL-3.0").font(.caption2).foregroundStyle(.tertiary)
+            Button("What's New…") { showWhatsNew = true }
+                .buttonStyle(.link).padding(.top, 4)
         }
         .frame(maxWidth: .infinity).padding(.vertical, 24)
+        .sheet(isPresented: $showWhatsNew) { WhatsNewView() }
     }
 
     // MARK: - Helpers

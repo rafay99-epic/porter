@@ -49,21 +49,23 @@ struct OnboardingView: View {
         case .source:  return "folder.fill"
         case .access:  return "lock.shield.fill"
         case .nas:     return "externaldrive.connected.to.line.below.fill"
-        case .login:   return "power"
-        case .menuBar: return "menubar.rectangle"
-        case .done:    return "checkmark.seal.fill"
+        case .login:    return "power"
+        case .menuBar:  return "menubar.rectangle"
+        case .features: return "sparkles"
+        case .done:     return "checkmark.seal.fill"
         }
     }
 
     @ViewBuilder private var content: some View {
         switch onboarding.step {
-        case .welcome: WelcomeStep()
-        case .source:  SourceStep(settings: settings)
-        case .access:  AccessStep(settings: settings, coordinator: coordinator)
-        case .nas:     NASStep(settings: settings, coordinator: coordinator)
-        case .login:   LoginStep(loginItem: loginItem)
-        case .menuBar: MenuBarStep(settings: settings)
-        case .done:    DoneStep(settings: settings)
+        case .welcome:  WelcomeStep()
+        case .source:   SourceStep(settings: settings)
+        case .access:   AccessStep(settings: settings, coordinator: coordinator)
+        case .nas:      NASStep(settings: settings, coordinator: coordinator)
+        case .login:    LoginStep(loginItem: loginItem)
+        case .menuBar:  MenuBarStep(settings: settings)
+        case .features: FeaturesStep()
+        case .done:     DoneStep(settings: settings)
         }
     }
 
@@ -88,6 +90,9 @@ struct OnboardingView: View {
 
     private func finishFlow() {
         onboarding.finish()
+        // The wizard already toured the new features, so don't also pop the
+        // What's New sheet on the dashboard for this version.
+        WhatsNew.markSeen()
         // Begin watching (first run) and re-point at whatever source the user
         // confirmed. start() is idempotent; reconfigure() handles a re-run where the
         // coordinator is already going.
@@ -104,17 +109,27 @@ private struct WelcomeStep: View {
             Text("Porter files your downloads onto your NAS — automatically.")
                 .font(.title3)
             VStack(alignment: .leading, spacing: 14) {
-                row("folder", "Watches a folder you choose")
-                row("arrow.right.circle", "Sorts each file by type onto the NAS")
+                row("folder", "Watches the folders you choose")
+                row("list.bullet.rectangle", "Sorts each file with rules you control")
                 row("menubar.rectangle", "Lives in the menu bar — always shows its status")
             }
-            Label("Takes about 30 seconds to set up.", systemImage: "clock")
+            Label("Takes about 30 seconds to set up — we'll tour the rest at the end.", systemImage: "clock")
                 .font(.callout).foregroundStyle(.secondary)
         }
     }
 
     private func row(_ icon: String, _ text: String) -> some View {
         Label(text, systemImage: icon).font(.callout)
+    }
+}
+
+private struct FeaturesStep: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Beyond the basics, here's what Porter can do. Everything's optional and lives in Settings — explore at your own pace.")
+                .foregroundStyle(.secondary)
+            FeatureHighlightsList()
+        }
     }
 }
 
@@ -381,7 +396,7 @@ private struct DoneStep: View {
             Label("Filing to \(settings.nasMountPath)", systemImage: "externaldrive")
             Label(settings.menuBarEnabled ? "Menu bar icon on" : "Menu bar icon off",
                   systemImage: settings.menuBarEnabled ? "menubar.rectangle" : "menubar.dock.rectangle")
-            Text("Drop a file in any watched folder and Porter files it onto the NAS within moments. Change folders, rules, and timing any time in Settings.")
+            Text("Drop a file in any watched folder and Porter files it onto the NAS within moments. Try Preview and Stats from the main window, and tune rules, conflict handling, quiet hours, and more in Settings.")
                 .foregroundStyle(.secondary)
         }
     }
