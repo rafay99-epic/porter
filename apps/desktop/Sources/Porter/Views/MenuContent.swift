@@ -85,6 +85,10 @@ struct MenuContent: View {
                 NSApp.activate(ignoringOtherApps: true)
             }
             Menu {
+                Button(coordinator.isPaused ? "Resume Sorting" : "Pause Sorting") {
+                    coordinator.setPaused(!coordinator.isPaused)
+                }
+                Divider()
                 Button("Preview Sort…") { showingPreview = true }
                 Button("Statistics…") { showingStats = true }
                 SettingsLink { Text("Settings…") }

@@ -33,6 +33,10 @@ final class PorterSettings {
     var autoCheckUpdates: Bool { didSet { save() } }
     /// Whether to post a native notification after each sweep (sorted / failed).
     var notificationsEnabled: Bool { didSet { save() } }
+    /// Global pause — when true, no sweeps run until the user resumes.
+    var paused: Bool { didSet { save() } }
+    /// A daily window during which sorting is suspended.
+    var quietHours: QuietHours { didSet { save() } }
 
     private let fileURL: URL
     private let log = AppInfo.logger("settings")
@@ -50,6 +54,8 @@ final class PorterSettings {
         var menuBarEnabled: Bool?
         var autoCheckUpdates: Bool?
         var notificationsEnabled: Bool?
+        var paused: Bool?
+        var quietHours: QuietHours?
     }
 
     init() {
@@ -76,6 +82,8 @@ final class PorterSettings {
         menuBarEnabled = stored?.menuBarEnabled ?? true
         autoCheckUpdates = stored?.autoCheckUpdates ?? true
         notificationsEnabled = stored?.notificationsEnabled ?? true
+        paused = stored?.paused ?? false
+        quietHours = stored?.quietHours ?? QuietHours()
     }
 
     var nasURL: URL { URL(fileURLWithPath: nasMountPath) }
@@ -109,7 +117,8 @@ final class PorterSettings {
             nasMountPath: nasMountPath, smbURL: smbURL,
             settleSeconds: settleSeconds, heartbeatSeconds: heartbeatSeconds,
             debounceSeconds: debounceSeconds, menuBarEnabled: menuBarEnabled,
-            autoCheckUpdates: autoCheckUpdates, notificationsEnabled: notificationsEnabled)
+            autoCheckUpdates: autoCheckUpdates, notificationsEnabled: notificationsEnabled,
+            paused: paused, quietHours: quietHours)
         do {
             try FileManager.default.createDirectory(
                 at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true)

@@ -9,6 +9,7 @@ enum PorterStatus: Equatable {
     case syncing            // a sweep is in flight
     case sorted(Int)        // transient confirmation after a sweep moved files
     case paused             // NAS not mounted
+    case suspended(String)  // intentionally not sorting (user pause / quiet hours)
     case needsPermission    // can't read the source folder (Full Disk Access)
     case error(String)      // last sweep had failures
 
@@ -20,6 +21,7 @@ enum PorterStatus: Equatable {
         case .syncing:         return "arrow.triangle.2.circlepath"
         case .sorted:          return "checkmark.circle.fill"
         case .paused:          return "externaldrive.badge.xmark"
+        case .suspended:       return "pause.circle"
         case .needsPermission: return "lock.shield"
         case .error:           return "exclamationmark.triangle"
         }
@@ -31,6 +33,7 @@ enum PorterStatus: Equatable {
         case .syncing:         return "Sorting…"
         case .sorted(let n):   return "Sorted \(n) file\(n == 1 ? "" : "s")"
         case .paused:          return "NAS not mounted"
+        case .suspended(let m): return m
         case .needsPermission: return "Needs file access"
         case .error(let msg):  return msg
         }
@@ -121,6 +124,22 @@ final class SortCoordinator {
         Task { await requestSweep() }
     }
 
+    var isPaused: Bool { settings.paused }
+
+    /// Toggle the global pause. Resuming kicks off a sweep immediately so a backlog
+    /// that built up while paused is cleared right away.
+    func setPaused(_ paused: Bool) {
+        guard settings.paused != paused else { return }
+        settings.paused = paused
+        if paused {
+            status = .suspended("Paused")
+            log.info("sorting paused by user")
+        } else {
+            log.info("sorting resumed by user")
+            Task { await requestSweep() }
+        }
+    }
+
     // MARK: - Watching
 
     private func startWatching() {
@@ -183,6 +202,17 @@ final class SortCoordinator {
     }
 
     private func runSweep() async {
+        // Intentional suspension takes precedence over everything: a user pause or
+        // an active quiet-hours window means "don't touch files", full stop.
+        if settings.paused {
+            status = .suspended("Paused")
+            return
+        }
+        if settings.quietHours.isQuiet(at: Date()) {
+            status = .suspended("Quiet hours until \(settings.quietHours.endLabel)")
+            return
+        }
+
         // Probe file access FIRST — independent of the NAS. This is what triggers
         // the Downloads TCC prompt on first launch, and it surfaces a missing grant
         // even while the share is offline (a paused-but-also-unreadable app would

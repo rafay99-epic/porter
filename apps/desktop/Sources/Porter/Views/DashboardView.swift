@@ -150,9 +150,29 @@ struct DashboardView: View {
         case .paused:
             callout(text: "The NAS isn't mounted, so sorting is paused. Files stay put until it's back.",
                     button: "Mount Now", prominent: false) { coordinator.mountNow() }
+        case .suspended:
+            if coordinator.isPaused {
+                callout(text: "Sorting is paused. New files stay in your watched folders until you resume.",
+                        button: "Resume Sorting", prominent: true) { coordinator.setPaused(false) }
+            } else {
+                infoCallout(text: "Quiet hours are on — sorting resumes at \(coordinator.settings.quietHours.endLabel).")
+            }
         default:
             EmptyView()
         }
+    }
+
+    /// A non-actionable informational banner (used for quiet hours).
+    private func infoCallout(text: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: "moon.zzz").foregroundStyle(.secondary)
+            Text(text).font(.callout).foregroundStyle(.secondary)
+            Spacer()
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 10))
+        .padding(.bottom, 12)
     }
 
     // MARK: - Banner / callout / footer
@@ -199,6 +219,9 @@ struct DashboardView: View {
         HStack(spacing: 12) {
             Button("Sort Now") { coordinator.sortNow() }
                 .buttonStyle(.borderedProminent)
+            Button(coordinator.isPaused ? "Resume" : "Pause") {
+                coordinator.setPaused(!coordinator.isPaused)
+            }
             Button("Preview…") { showingPreview = true }
             Button("Stats…") { showingStats = true }
             Spacer()

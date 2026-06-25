@@ -59,6 +59,16 @@ struct SettingsView: View {
                 }
             }
 
+            Section("Quiet Hours") {
+                Toggle("Don't sort during a daily window", isOn: $settings.quietHours.enabled)
+                if settings.quietHours.enabled {
+                    DatePicker("From", selection: quietStartBinding, displayedComponents: .hourAndMinute)
+                    DatePicker("Until", selection: quietEndBinding, displayedComponents: .hourAndMinute)
+                    Text("Sorting pauses inside this window and resumes automatically after it. Windows that cross midnight are fine.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+
             if Channel.current.updatesEnabled {
                 Section("Updates") {
                     Toggle("Check for updates automatically", isOn: $settings.autoCheckUpdates)
@@ -137,6 +147,26 @@ struct SettingsView: View {
 
     private var launchAtLoginBinding: Binding<Bool> {
         Binding(get: { loginItem.isEnabled }, set: { loginItem.setEnabled($0) })
+    }
+
+    // Quiet-hours are stored as minutes-since-midnight; the DatePicker works in
+    // Dates, so bridge through "today at HH:mm" in both directions.
+    private var quietStartBinding: Binding<Date> { minuteBinding(\.startMinute) }
+    private var quietEndBinding: Binding<Date> { minuteBinding(\.endMinute) }
+
+    private func minuteBinding(_ keyPath: WritableKeyPath<QuietHours, Int>) -> Binding<Date> {
+        Binding(
+            get: { Self.date(fromMinutes: settings.quietHours[keyPath: keyPath]) },
+            set: { settings.quietHours[keyPath: keyPath] = Self.minutes(from: $0) })
+    }
+
+    private static func date(fromMinutes minutes: Int) -> Date {
+        Calendar.current.date(bySettingHour: minutes / 60, minute: minutes % 60, second: 0, of: Date()) ?? Date()
+    }
+
+    private static func minutes(from date: Date) -> Int {
+        let c = Calendar.current.dateComponents([.hour, .minute], from: date)
+        return (c.hour ?? 0) * 60 + (c.minute ?? 0)
     }
 
     private func folderRow(label: String, path: Binding<String>, onChange: @escaping () -> Void) -> some View {

@@ -54,6 +54,7 @@ func statusColor(_ status: PorterStatus) -> Color {
     case .syncing:         return .blue
     case .sorted:          return .green
     case .paused:          return .orange
+    case .suspended:       return .gray
     case .needsPermission, .error: return .red
     }
 }
