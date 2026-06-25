@@ -74,6 +74,7 @@ final class SortCoordinator {
     let settings: PorterSettings
 
     private let log = AppInfo.logger("coordinator")
+    private let notifier = Notifier()
     private let watcherQueue = DispatchQueue(label: "\(AppInfo.bundleIdentifier).watcher", qos: .utility)
     private var watcher: FolderWatcher?
     private var debounceTask: Task<Void, Never>?
@@ -96,6 +97,7 @@ final class SortCoordinator {
         started = true
         FileLog.shared.pruneOldLogs()
         log.info("\(Channel.current.displayName) launched — watching \(settings.activeSourceURLs.count) folder(s), filing to \(settings.nasMountPath)")
+        if settings.notificationsEnabled { notifier.requestAuthorizationIfNeeded() }
         observeVolumeChanges()
         startWatching()
         startHeartbeat()
@@ -254,6 +256,10 @@ final class SortCoordinator {
 
         if summary.didWork {
             log.info("sweep done — moved \(summary.moved) failed \(summary.failed) skipped \(summary.skipped)")
+            if settings.notificationsEnabled {
+                notifier.notifySorted(summary.moved)
+                notifier.notifyFailures(summary.failed)
+            }
         }
     }
 
@@ -289,6 +295,10 @@ final class SortCoordinator {
             await self.requestSweep()
         }
     }
+
+    /// Called when the user flips notifications on in Settings — prompts for the
+    /// system grant if we haven't asked yet.
+    func enableNotifications() { notifier.requestAuthorizationIfNeeded() }
 
     func revealLogInFinder() {
         NSWorkspace.shared.activateFileViewerSelecting([FileLog.shared.currentLogFileURL()])

@@ -37,6 +37,10 @@ struct SettingsView: View {
 
             Section("Display") {
                 Toggle("Show icon in the menu bar", isOn: $settings.menuBarEnabled)
+                Toggle("Notify me when files are sorted", isOn: $settings.notificationsEnabled)
+                    .onChange(of: settings.notificationsEnabled) { _, enabled in
+                        if enabled { coordinator.enableNotifications() }
+                    }
             }
 
             Section("NAS") {

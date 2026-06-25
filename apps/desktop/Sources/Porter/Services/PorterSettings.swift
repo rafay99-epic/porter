@@ -31,6 +31,8 @@ final class PorterSettings {
     var menuBarEnabled: Bool { didSet { save() } }
     /// Whether to check for updates automatically at launch.
     var autoCheckUpdates: Bool { didSet { save() } }
+    /// Whether to post a native notification after each sweep (sorted / failed).
+    var notificationsEnabled: Bool { didSet { save() } }
 
     private let fileURL: URL
     private let log = AppInfo.logger("settings")
@@ -47,6 +49,7 @@ final class PorterSettings {
         var debounceSeconds: Double?
         var menuBarEnabled: Bool?
         var autoCheckUpdates: Bool?
+        var notificationsEnabled: Bool?
     }
 
     init() {
@@ -72,6 +75,7 @@ final class PorterSettings {
         debounceSeconds = stored?.debounceSeconds ?? 1
         menuBarEnabled = stored?.menuBarEnabled ?? true
         autoCheckUpdates = stored?.autoCheckUpdates ?? true
+        notificationsEnabled = stored?.notificationsEnabled ?? true
     }
 
     var nasURL: URL { URL(fileURLWithPath: nasMountPath) }
@@ -105,7 +109,7 @@ final class PorterSettings {
             nasMountPath: nasMountPath, smbURL: smbURL,
             settleSeconds: settleSeconds, heartbeatSeconds: heartbeatSeconds,
             debounceSeconds: debounceSeconds, menuBarEnabled: menuBarEnabled,
-            autoCheckUpdates: autoCheckUpdates)
+            autoCheckUpdates: autoCheckUpdates, notificationsEnabled: notificationsEnabled)
         do {
             try FileManager.default.createDirectory(
                 at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
