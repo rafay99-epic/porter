@@ -52,8 +52,16 @@ including the **xattr-stripping copy** — see below.
   - **nightly** → `Porter Nightly.app`, `…porter.nightly`, amber icon, `-nightly`.
   - **dev** → `Porter Dev.app`, `…porter.dev`, purple icon. Local only, no updater.
 - Per-channel data home (`~/.porter`, `~/.porter-nightly`, `~/.porter-dev`) so the
-  three run side by side. CI (`.github/workflows/ci.yml`): test + lint gate the
-  release; `main` push publishes `Porter.dmg`, PRs upload it as an artifact.
+  three run side by side. CI: `ci.yml` (push to `main`) — test + lint gate the
+  release, then publishes `Porter.dmg`; `nightly.yml` (push to `nightly`) refreshes
+  a single rolling `nightly` pre-release whose title carries `build <n>` (the
+  updater parses it). PRs upload the DMG as an artifact instead of publishing.
+- **Repo is PRIVATE** (`rafay99-epic/porter`). The in-app `Updater` therefore
+  authenticates: it pulls a token from `gh auth token` and hits the Releases API +
+  downloads assets via the asset API URL with `Accept: application/octet-stream` +
+  `Authorization: Bearer`. No `gh`/token → it just can't see releases (surfaced as a
+  status message), same shape as Crisp's updater. `Updater.repoSlug` must match the
+  repo.
 
 ## Architecture
 
