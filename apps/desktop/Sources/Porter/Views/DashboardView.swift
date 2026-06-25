@@ -8,6 +8,7 @@ struct DashboardView: View {
     @Bindable var coordinator: SortCoordinator
     @Bindable var loginItem: LoginItem
     @Bindable var updater: Updater
+    @State private var showingPreview = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -197,10 +198,12 @@ struct DashboardView: View {
         HStack(spacing: 12) {
             Button("Sort Now") { coordinator.sortNow() }
                 .buttonStyle(.borderedProminent)
+            Button("Preview…") { showingPreview = true }
             Button("Reveal Log") { coordinator.revealLogInFinder() }
             Spacer()
             SettingsLink { Text("Settings…") }
         }
         .padding(16)
+        .sheet(isPresented: $showingPreview) { PreviewSheet(coordinator: coordinator) }
     }
 }

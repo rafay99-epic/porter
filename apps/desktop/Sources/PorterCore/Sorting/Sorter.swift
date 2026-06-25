@@ -19,6 +19,23 @@ public struct SweepSummary: Sendable, Equatable {
     public var didWork: Bool { moved > 0 || failed > 0 }
 }
 
+/// One move the Sorter *would* make — produced by `plan()` for the dry-run
+/// preview, without touching any file.
+public struct PlannedMove: Identifiable, Sendable, Equatable {
+    public var id: String { sourcePath }
+    /// Full path of the file in its watched folder.
+    public let sourcePath: String
+    public let name: String
+    /// Destination folder under the NAS root (may be nested).
+    public let destination: String
+
+    public init(sourcePath: String, name: String, destination: String) {
+        self.sourcePath = sourcePath
+        self.name = name
+        self.destination = destination
+    }
+}
+
 /// Orchestrates a single sweep: enumerate the top level of each source folder,
 /// triage each entry, classify it, and hand eligible files to the `Mover`. Pure
 /// apart from the filesystem moves themselves — no logging, no UI — so it can be
@@ -48,44 +65,14 @@ public struct Sorter: Sendable {
                       ignoring: Set<String> = [],
                       onProgress: (@Sendable (Int, Int) -> Void)? = nil) -> SweepSummary {
         var summary = SweepSummary()
-        let fm = FileManager.default
 
         // Pass 1 — triage: figure out exactly which files are eligible to move.
         // Skips (junk / partial / dir / unsettled) are counted here, so the
         // progress total reflects only real work.
-        var eligible: [EligibleFile] = []
-        for source in sources where source.enabled {
-            let contents: [URL]
-            do {
-                contents = try fm.contentsOfDirectory(
-                    at: source.url,
-                    includingPropertiesForKeys: [.isDirectoryKey, .contentModificationDateKey],
-                    options: [])
-            } catch {
-                let nsError = error as NSError
-                // 257 = no read permission (TCC) → surface as readDenied.
-                // 260 = no such file (source deleted/moved) → skip silently.
-                if nsError.code == 257 || (error as? POSIXError)?.code == .EPERM {
-                    summary.readDenied = true
-                }
-                continue
-            }
-
-            for url in contents {
-                let name = url.lastPathComponent
-                if FileTriage.isMacOSJunk(name) { continue }   // not counted, not logged
-                if ignoring.contains(url.standardizedFileURL.path) { continue }   // pulled back by Undo
-                let values = try? url.resourceValues(forKeys: [.isDirectoryKey, .contentModificationDateKey])
-                if values?.isDirectory == true { summary.skipped += 1; continue }
-                if FileTriage.isPartialOrHidden(name) { summary.skipped += 1; continue }
-                let modified = values?.contentModificationDate ?? now
-                if !FileTriage.isSettled(modified: modified, now: now, seconds: settleSeconds) {
-                    summary.skipped += 1; continue
-                }
-                let destination = route(name, with: source.routing)
-                eligible.append(EligibleFile(url: url, name: name, destination: destination))
-            }
-        }
+        let triaged = triage(now: now, ignoring: ignoring)
+        let eligible = triaged.files
+        summary.skipped = triaged.skipped
+        summary.readDenied = triaged.readDenied
 
         // Pass 2 — move, reporting progress as we go.
         let total = eligible.count
@@ -120,6 +107,66 @@ public struct Sorter: Sendable {
             onProgress?(index + 1, total)
         }
         return summary
+    }
+
+    /// Dry run: the moves a sweep *would* make right now, in the order it would
+    /// make them, without touching any file. Same triage as `sweep` (settle delay,
+    /// junk/partial skips, ignore set), so the preview matches reality. Settled
+    /// files only — a still-downloading file won't appear until it would actually
+    /// move.
+    public func plan(now: Date = Date(), ignoring: Set<String> = []) -> [PlannedMove] {
+        triage(now: now, ignoring: ignoring).files.map {
+            PlannedMove(sourcePath: $0.url.path, name: $0.name, destination: $0.destination)
+        }
+    }
+
+    /// Outcome of pass-1 triage: the files to move plus the bookkeeping a sweep
+    /// needs (skip count, whether a source was unreadable).
+    private struct TriageResult {
+        var files: [EligibleFile] = []
+        var skipped = 0
+        var readDenied = false
+    }
+
+    /// Shared pass-1 triage used by both `sweep` and `plan`. Pure (read-only):
+    /// enumerate each enabled source, drop junk/partial/dirs/unsettled/ignored, and
+    /// resolve each survivor's destination.
+    private func triage(now: Date, ignoring: Set<String>) -> TriageResult {
+        let fm = FileManager.default
+        var result = TriageResult()
+        for source in sources where source.enabled {
+            let contents: [URL]
+            do {
+                contents = try fm.contentsOfDirectory(
+                    at: source.url,
+                    includingPropertiesForKeys: [.isDirectoryKey, .contentModificationDateKey],
+                    options: [])
+            } catch {
+                let nsError = error as NSError
+                // 257 = no read permission (TCC) → surface as readDenied.
+                // 260 = no such file (source deleted/moved) → skip silently.
+                if nsError.code == 257 || (error as? POSIXError)?.code == .EPERM {
+                    result.readDenied = true
+                }
+                continue
+            }
+
+            for url in contents {
+                let name = url.lastPathComponent
+                if FileTriage.isMacOSJunk(name) { continue }   // not counted, not logged
+                if ignoring.contains(url.standardizedFileURL.path) { continue }   // pulled back by Undo
+                let values = try? url.resourceValues(forKeys: [.isDirectoryKey, .contentModificationDateKey])
+                if values?.isDirectory == true { result.skipped += 1; continue }
+                if FileTriage.isPartialOrHidden(name) { result.skipped += 1; continue }
+                let modified = values?.contentModificationDate ?? now
+                if !FileTriage.isSettled(modified: modified, now: now, seconds: settleSeconds) {
+                    result.skipped += 1; continue
+                }
+                let destination = route(name, with: source.routing)
+                result.files.append(EligibleFile(url: url, name: name, destination: destination))
+            }
+        }
+        return result
     }
 
     /// Destination for `name` under this source's routing.

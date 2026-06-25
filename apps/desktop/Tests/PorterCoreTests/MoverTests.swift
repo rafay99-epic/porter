@@ -98,6 +98,23 @@ final class MoverTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: nas.appendingPathComponent("PDFs/sortme.pdf").path))
     }
 
+    func testPlanPreviewsWithoutMoving() throws {
+        _ = try makeFile("a.png")
+        _ = try makeFile("b.pdf")
+        _ = try makeFile(".DS_Store")               // junk → absent from plan
+        _ = try makeFile("c.mp4.crdownload")         // partial → absent from plan
+
+        let src = WatchSource(path: source.path, routing: .classify)
+        let sorter = Sorter(sources: [src], rules: SortRule.defaults, nasRoot: nas, settleSeconds: 0)
+        let plan = sorter.plan(now: Date().addingTimeInterval(60))
+
+        XCTAssertEqual(Set(plan.map(\.name)), ["a.png", "b.pdf"])
+        XCTAssertEqual(plan.first { $0.name == "a.png" }?.destination, "Pictures")
+        // Nothing actually moved.
+        XCTAssertTrue(FileManager.default.fileExists(atPath: source.appendingPathComponent("a.png").path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: nas.appendingPathComponent("Pictures/a.png").path))
+    }
+
     func testSweepEndToEndClassify() throws {
         _ = try makeFile("a.png")
         _ = try makeFile("b.pdf")

@@ -10,6 +10,7 @@ struct MenuContent: View {
     @Bindable var loginItem: LoginItem
     @Bindable var updater: Updater
     @Environment(\.openWindow) private var openWindow
+    @State private var showingPreview = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -83,6 +84,7 @@ struct MenuContent: View {
                 NSApp.activate(ignoringOtherApps: true)
             }
             Menu {
+                Button("Preview Sort…") { showingPreview = true }
                 SettingsLink { Text("Settings…") }
                 Button("Reveal Log in Finder") { coordinator.revealLogInFinder() }
                 Divider()
@@ -94,5 +96,6 @@ struct MenuContent: View {
             .fixedSize()
         }
         .padding(12)
+        .sheet(isPresented: $showingPreview) { PreviewSheet(coordinator: coordinator) }
     }
 }

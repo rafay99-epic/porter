@@ -283,6 +283,22 @@ final class SortCoordinator {
         }
     }
 
+    // MARK: - Dry-run preview
+
+    /// Compute the moves a sweep would make right now, without touching any file.
+    /// Runs the same triage off the main actor so a big folder doesn't hitch the UI.
+    func previewPlan() async -> [PlannedMove] {
+        let sources = settings.sources
+        let rules = settings.rules
+        let nasRoot = settings.nasURL
+        let settle = settings.settleSeconds
+        let ignoring = ignoredPaths
+        return await Task.detached(priority: .userInitiated) {
+            Sorter(sources: sources, rules: rules, nasRoot: nasRoot, settleSeconds: settle)
+                .plan(ignoring: ignoring)
+        }.value
+    }
+
     // MARK: - Undo
 
     /// Move a sorted file back to the folder it came from. Best-effort: uses the
