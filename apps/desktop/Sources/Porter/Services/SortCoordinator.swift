@@ -241,13 +241,16 @@ final class SortCoordinator {
         let rules = settings.rules
         let nasRoot = settings.nasURL
         let settle = settings.settleSeconds
+        let dedupe = settings.deduplicate
+        let verify = settings.verifyAfterCopy
         let ignoring = ignoredPaths
         // Capture self strongly: it's a @MainActor (Sendable) object and the task is
         // short-lived, so there's no cycle and the @Sendable progress callback can
         // hop back to the main actor to publish progress.
         let coordinator = self
         let summary = await Task.detached(priority: .utility) {
-            Sorter(sources: sources, rules: rules, nasRoot: nasRoot, settleSeconds: settle).sweep(ignoring: ignoring) { completed, total in
+            Sorter(sources: sources, rules: rules, nasRoot: nasRoot, settleSeconds: settle,
+                   deduplicate: dedupe, verifyAfterCopy: verify).sweep(ignoring: ignoring) { completed, total in
                 Task { @MainActor in
                     coordinator.progress = total > 0 ? SortProgress(completed: completed, total: total) : nil
                 }
@@ -294,7 +297,7 @@ final class SortCoordinator {
         }
 
         if summary.didWork {
-            log.info("sweep done — moved \(summary.moved) failed \(summary.failed) skipped \(summary.skipped)")
+            log.info("sweep done — moved \(summary.moved) failed \(summary.failed) skipped \(summary.skipped) deduped \(summary.deduped)")
             if settings.notificationsEnabled {
                 notifier.notifySorted(summary.moved)
                 notifier.notifyFailures(summary.failed)

@@ -5,6 +5,8 @@ public struct SweepSummary: Sendable, Equatable {
     public var moved = 0
     public var skipped = 0
     public var failed = 0
+    /// Files dropped because a byte-identical copy was already on the NAS.
+    public var deduped = 0
     /// Move/failure records, newest sweep's worth. Skips are not included.
     public var entries: [ActivityEntry] = []
     /// True when a source folder couldn't be *read* — almost always a missing
@@ -16,7 +18,7 @@ public struct SweepSummary: Sendable, Equatable {
     /// mount table no longer shows the root). The coordinator pauses and retries.
     public var nasLost = false
 
-    public var didWork: Bool { moved > 0 || failed > 0 }
+    public var didWork: Bool { moved > 0 || failed > 0 || deduped > 0 }
 }
 
 /// One move the Sorter *would* make — produced by `plan()` for the dry-run
@@ -46,12 +48,19 @@ public struct Sorter: Sendable {
     public let rules: [SortRule]
     public let mover: Mover
     public let settleSeconds: TimeInterval
+    /// Drop a file when a byte-identical copy already sits at the destination.
+    public let deduplicate: Bool
+    /// Re-hash each copy on the NAS before removing the source (integrity check).
+    public let verifyAfterCopy: Bool
 
-    public init(sources: [WatchSource], rules: [SortRule], nasRoot: URL, settleSeconds: TimeInterval = 30) {
+    public init(sources: [WatchSource], rules: [SortRule], nasRoot: URL, settleSeconds: TimeInterval = 30,
+                deduplicate: Bool = false, verifyAfterCopy: Bool = false) {
         self.sources = sources
         self.rules = rules
         self.mover = Mover(nasRoot: nasRoot)
         self.settleSeconds = settleSeconds
+        self.deduplicate = deduplicate
+        self.verifyAfterCopy = verifyAfterCopy
     }
 
     /// Run a sweep. `onProgress(completed, total)` is called once up front with
@@ -79,7 +88,8 @@ public struct Sorter: Sendable {
         onProgress?(0, total)
         for (index, item) in eligible.enumerated() {
             do {
-                let dest = try mover.move(item.url, to: item.destination, policy: item.policy)
+                let dest = try mover.move(item.url, to: item.destination, policy: item.policy,
+                                          deduplicate: deduplicate, verify: verifyAfterCopy)
                 summary.moved += 1
                 summary.entries.append(ActivityEntry(
                     date: now, fileName: item.name, destination: item.destination,
@@ -89,6 +99,9 @@ public struct Sorter: Sendable {
                 // Conflict policy (skip / keep-newer) chose to leave it in place —
                 // a silent skip, exactly like a junk/partial skip. Not a failure.
                 summary.skipped += 1
+            } catch Mover.MoveError.duplicateRemoved {
+                // An identical copy was already on the NAS; the source was removed.
+                summary.deduped += 1
             } catch let Mover.MoveError.sourceNotRemoved(destination) {
                 summary.failed += 1
                 summary.entries.append(ActivityEntry(
@@ -240,6 +253,7 @@ public struct Sorter: Sendable {
         case Mover.MoveError.createDirectoryFailed(let p): return "couldn't create folder \(p)"
         case Mover.MoveError.copyFailed(let p):            return "copy to \(p) failed"
         case Mover.MoveError.renameFailed(let p):          return "rename to \(p) failed"
+        case Mover.MoveError.verifyFailed(let name):       return "copy of \(name) didn't verify — left in place"
         default:                                           return error.localizedDescription
         }
     }

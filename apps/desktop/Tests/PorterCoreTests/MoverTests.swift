@@ -102,6 +102,48 @@ final class MoverTests: XCTestCase {
         XCTAssertEqual(try String(contentsOf: dest, encoding: .utf8), "new", "kept the newer NAS copy")
     }
 
+    func testDeduplicateDropsIdenticalReDownload() throws {
+        let docs = nas.appendingPathComponent("PDFs")
+        try FileManager.default.createDirectory(at: docs, withIntermediateDirectories: true)
+        try "same-bytes".write(to: docs.appendingPathComponent("paper.pdf"), atomically: true, encoding: .utf8)
+
+        let file = try makeFile("paper.pdf", contents: "same-bytes")
+        XCTAssertThrowsError(try Mover(nasRoot: nas).move(file, to: "PDFs", deduplicate: true)) { error in
+            guard case Mover.MoveError.duplicateRemoved = error else {
+                return XCTFail("expected duplicateRemoved, got \(error)")
+            }
+        }
+        // Source dropped (it's already on the NAS); no " (1)" copy was created.
+        XCTAssertFalse(FileManager.default.fileExists(atPath: file.path))
+        let pdfs = try FileManager.default.contentsOfDirectory(atPath: docs.path)
+        XCTAssertEqual(pdfs.sorted(), ["paper.pdf"])
+    }
+
+    func testDeduplicateKeepsDifferentContentSameName() throws {
+        let docs = nas.appendingPathComponent("PDFs")
+        try FileManager.default.createDirectory(at: docs, withIntermediateDirectories: true)
+        try "old-bytes".write(to: docs.appendingPathComponent("paper.pdf"), atomically: true, encoding: .utf8)
+
+        let file = try makeFile("paper.pdf", contents: "new-bytes")
+        let dest = try Mover(nasRoot: nas).move(file, to: "PDFs", policy: .rename, deduplicate: true)
+        XCTAssertEqual(dest.lastPathComponent, "paper (1).pdf", "different content → kept, not deduped")
+    }
+
+    func testVerifyAfterCopySucceedsForGoodCopy() throws {
+        let file = try makeFile("clip.mov", contents: "movie-bytes")
+        let dest = try Mover(nasRoot: nas).move(file, to: "Movies", verify: true)
+        XCTAssertEqual(try String(contentsOf: dest, encoding: .utf8), "movie-bytes")
+        XCTAssertFalse(FileManager.default.fileExists(atPath: file.path))
+    }
+
+    func testChecksumMatchesAndDiffers() throws {
+        let a = try makeFile("a.bin", contents: "hello")
+        let b = try makeFile("b.bin", contents: "hello")
+        let c = try makeFile("c.bin", contents: "world")
+        XCTAssertTrue(Checksum.filesAreIdentical(a, b))
+        XCTAssertFalse(Checksum.filesAreIdentical(a, c))
+    }
+
     func testCaseInsensitiveFolderResolutionMakesNoDuplicate() throws {
         // NAS already has a lowercase "documents". The invariant — independent of
         // whether the filesystem is case-sensitive — is that the move reuses it

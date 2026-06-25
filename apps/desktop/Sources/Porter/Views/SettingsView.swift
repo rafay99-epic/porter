@@ -59,6 +59,13 @@ struct SettingsView: View {
                 }
             }
 
+            Section("Integrity") {
+                Toggle("Skip duplicates already on the NAS", isOn: $settings.deduplicate)
+                Toggle("Verify each copy before deleting the original", isOn: $settings.verifyAfterCopy)
+                Text("Duplicate skipping drops a re-downloaded file when an identical copy is already filed. Verification re-hashes each copy on the NAS to catch corruption before the original is removed (slower, safest).")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
             Section("Quiet Hours") {
                 Toggle("Don't sort during a daily window", isOn: $settings.quietHours.enabled)
                 if settings.quietHours.enabled {
