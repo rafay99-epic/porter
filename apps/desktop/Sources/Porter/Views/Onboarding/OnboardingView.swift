@@ -90,9 +90,6 @@ struct OnboardingView: View {
 
     private func finishFlow() {
         onboarding.finish()
-        // The wizard already toured the new features, so don't also pop the
-        // What's New sheet on the dashboard for this version.
-        WhatsNew.markSeen()
         // Begin watching (first run) and re-point at whatever source the user
         // confirmed. start() is idempotent; reconfigure() handles a re-run where the
         // coordinator is already going.

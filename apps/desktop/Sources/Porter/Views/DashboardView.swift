@@ -216,17 +216,26 @@ struct DashboardView: View {
     }
 
     private var footer: some View {
-        HStack(spacing: 12) {
-            Button("Sort Now") { coordinator.sortNow() }
-                .buttonStyle(.borderedProminent)
-            Button(coordinator.isPaused ? "Resume" : "Pause") {
-                coordinator.setPaused(!coordinator.isPaused)
+        HStack(spacing: 8) {
+            Button { coordinator.sortNow() } label: {
+                Label("Sort Now", systemImage: "arrow.triangle.2.circlepath")
             }
-            Button("Preview…") { showingPreview = true }
-            Button("Stats…") { showingStats = true }
+            .buttonStyle(.borderedProminent)
+
+            Button { coordinator.setPaused(!coordinator.isPaused) } label: {
+                Label(coordinator.isPaused ? "Resume" : "Pause",
+                      systemImage: coordinator.isPaused ? "play.fill" : "pause.fill")
+            }
+            Button { showingPreview = true } label: { Label("Preview", systemImage: "eye") }
+            Button { showingStats = true } label: { Label("Stats", systemImage: "chart.bar") }
+
             Spacer()
-            SettingsLink { Text("Settings…") }
+
+            SettingsLink { Label("Settings", systemImage: "gearshape") }
         }
+        .buttonStyle(.bordered)
+        .controlSize(.large)
+        .labelStyle(.titleAndIcon)
         .padding(16)
         .sheet(isPresented: $showingPreview) { PreviewSheet(coordinator: coordinator) }
         .sheet(isPresented: $showingStats) { StatsView(coordinator: coordinator) }

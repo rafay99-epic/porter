@@ -33,8 +33,7 @@ struct FeatureHighlight: Identifiable {
     ]
 }
 
-/// A scrollable list of feature rows. Reused by the onboarding step and the
-/// What's New sheet so the copy stays in one place.
+/// A list of feature rows, shown in the onboarding tour.
 struct FeatureHighlightsList: View {
     var features: [FeatureHighlight] = FeatureHighlight.all
 
@@ -54,59 +53,5 @@ struct FeatureHighlightsList: View {
                 }
             }
         }
-    }
-}
-
-/// One-time "What's New" sheet shown to existing users after an update (new users
-/// see the same content as an onboarding step instead). Presentation is gated by
-/// `WhatsNew` so it appears once per version.
-struct WhatsNewView: View {
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        VStack(spacing: 0) {
-            VStack(spacing: 8) {
-                Image(systemName: "sparkles")
-                    .font(.system(size: 34)).foregroundStyle(.tint)
-                    .symbolRenderingMode(.hierarchical)
-                Text("What's New in Porter").font(.title2).bold()
-                Text("Porter just got a lot more capable. Here's what's new.")
-                    .font(.callout).foregroundStyle(.secondary)
-            }
-            .padding(.top, 24).padding(.bottom, 16).frame(maxWidth: .infinity)
-
-            Divider()
-            ScrollView { FeatureHighlightsList().padding(20) }
-            Divider()
-
-            HStack {
-                Spacer()
-                Button("Got it") { dismiss() }
-                    .keyboardShortcut(.defaultAction).buttonStyle(.borderedProminent)
-            }
-            .padding(14)
-        }
-        .frame(width: 460, height: 540)
-    }
-}
-
-/// Tracks whether the current version's "What's New" has been seen, so it shows
-/// once per release. Stored per-channel via the standard defaults suite (the same
-/// place onboarding's completion flag lives).
-enum WhatsNew {
-    private static let key = "lastSeenFeaturesVersion"
-
-    static var currentVersion: String {
-        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
-    }
-
-    /// Show when the stored "last seen" version differs from the running one — which
-    /// includes existing users upgrading for the first time (no value stored yet).
-    static func shouldShow() -> Bool {
-        UserDefaults.standard.string(forKey: key) != currentVersion
-    }
-
-    static func markSeen() {
-        UserDefaults.standard.set(currentVersion, forKey: key)
     }
 }
