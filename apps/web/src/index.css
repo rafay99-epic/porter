@@ -1,0 +1,124 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+    --paper: #f4f2ec;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply bg-paper text-ink font-sans;
+    font-feature-settings: 'ss01', 'cv01';
+    overflow-x: hidden;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  ::selection {
+    background: rgba(31, 110, 240, 0.2);
+  }
+
+  /* The recreated native windows must use the macOS system font, not the
+     editorial display/sans — so they read as the real app. */
+  .sysfont {
+    font-family: theme('fontFamily.system');
+  }
+}
+
+@layer components {
+  .wrap {
+    @apply mx-auto w-full max-w-[1240px] px-5 sm:px-8;
+  }
+  .wrap-tight {
+    @apply mx-auto w-full max-w-[920px] px-5 sm:px-8;
+  }
+
+  /* Editorial display heading — tight, confident, fluid. */
+  .display {
+    font-family: theme('fontFamily.display');
+    font-weight: 700;
+    letter-spacing: -0.035em;
+    line-height: 0.98;
+  }
+
+  /* A small monospace label — the "instrument readout" voice. */
+  .readout {
+    @apply font-mono text-[12px] uppercase tracking-[0.18em] text-ink-3;
+  }
+
+  /* Hairline rule, ink on paper. */
+  .rule {
+    @apply h-px w-full bg-ink-line;
+  }
+
+  /* Native macOS bordered button (used inside recreated windows). */
+  .mac-btn {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-[6px] border border-black/10
+           bg-gradient-to-b from-white to-[#f1f1f3] px-2.5 py-[5px] text-[12.5px] font-medium
+           text-ink shadow-[0_1px_1px_rgba(20,22,28,0.05)] transition active:translate-y-px;
+  }
+  .mac-btn-prominent {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-[6px] bg-gradient-to-b
+           from-blue-500 to-blue-600 px-2.5 py-[5px] text-[12.5px] font-semibold text-white
+           shadow-[0_1px_1px_rgba(20,22,28,0.18),0_1px_0_rgba(255,255,255,0.25)_inset]
+           transition active:translate-y-px;
+  }
+  .mac-divider {
+    @apply h-px w-full bg-black/[0.08];
+  }
+
+  /* Primary site CTA — solid ink pill. */
+  .btn-ink {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-ink px-5 py-3
+           text-[15px] font-semibold text-paper transition hover:bg-black active:translate-y-px;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-ink/15 px-5 py-3
+           text-[15px] font-semibold text-ink transition hover:border-ink/30;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  .text-pretty {
+    text-wrap: pretty;
+  }
+  /* Engineering-paper grid, very faint. */
+  .bg-grid {
+    background-image:
+      linear-gradient(rgba(20, 22, 28, 0.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(20, 22, 28, 0.045) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+  .bg-dots {
+    background-image: radial-gradient(rgba(20, 22, 28, 0.08) 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+  .mask-fade-y {
+    -webkit-mask-image: linear-gradient(to bottom, transparent, #000 10%, #000 90%, transparent);
+    mask-image: linear-gradient(to bottom, transparent, #000 10%, #000 90%, transparent);
+  }
+  .mask-fade-x {
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
+    mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
+  }
+}
