@@ -37,4 +37,15 @@ public enum FileCategory: String, CaseIterable, Sendable, Equatable {
         case .other:       return "questionmark.folder"
         }
     }
+
+    /// An SF Symbol for an arbitrary destination *folder name*. If it matches a
+    /// built-in category's folder (case-insensitively) use that icon; otherwise a
+    /// generic folder — so custom rule destinations still get a sensible glyph.
+    public static func symbol(forFolder folder: String) -> String {
+        let top = folder.split(separator: "/").first.map(String.init) ?? folder
+        if let match = allCases.first(where: { $0.folderName.lowercased() == top.lowercased() }) {
+            return match.symbolName
+        }
+        return "folder"
+    }
 }

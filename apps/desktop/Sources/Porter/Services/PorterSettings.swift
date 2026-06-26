@@ -8,13 +8,17 @@ import PorterCore
 /// decodes with a default, so adding a new key later doesn't break an existing
 /// file. Channels keep separate files (different `configDirectory`).
 ///
-/// Nothing here is hardcoded into behaviour: the settle delay, the safety-sweep
-/// heartbeat, and the event debounce are all read from this config, so they can be
-/// tuned without a rebuild.
+/// Nothing here is hardcoded into behaviour: the watched folders, the sort rules,
+/// the settle delay, the safety-sweep heartbeat, and the event debounce are all
+/// read from this config, so they can be tuned without a rebuild.
 @MainActor
 @Observable
 final class PorterSettings {
-    var sourcePath: String { didSet { save() } }
+    /// Folders Porter watches, each with its own routing.
+    var sources: [WatchSource] { didSet { save() } }
+    /// Ordered sort rules (first enabled match wins). Editable in Settings.
+    var rules: [SortRule] { didSet { save() } }
+
     var nasMountPath: String { didSet { save() } }
     var smbURL: String { didSet { save() } }
     /// Seconds a file must be untouched before Porter moves it (the old hardcoded 30).
@@ -27,11 +31,24 @@ final class PorterSettings {
     var menuBarEnabled: Bool { didSet { save() } }
     /// Whether to check for updates automatically at launch.
     var autoCheckUpdates: Bool { didSet { save() } }
+    /// Whether to post a native notification after each sweep (sorted / failed).
+    var notificationsEnabled: Bool { didSet { save() } }
+    /// Global pause — when true, no sweeps run until the user resumes.
+    var paused: Bool { didSet { save() } }
+    /// A daily window during which sorting is suspended.
+    var quietHours: QuietHours { didSet { save() } }
+    /// Drop a file when a byte-identical copy already exists at the destination.
+    var deduplicate: Bool { didSet { save() } }
+    /// Re-hash each NAS copy before removing the source (integrity check).
+    var verifyAfterCopy: Bool { didSet { save() } }
 
     private let fileURL: URL
     private let log = AppInfo.logger("settings")
 
     private struct Stored: Codable {
+        var sources: [WatchSource]?
+        var rules: [SortRule]?
+        /// Legacy single-folder key, migrated into `sources` on load.
         var sourcePath: String?
         var nasMountPath: String?
         var smbURL: String?
@@ -40,16 +57,29 @@ final class PorterSettings {
         var debounceSeconds: Double?
         var menuBarEnabled: Bool?
         var autoCheckUpdates: Bool?
+        var notificationsEnabled: Bool?
+        var paused: Bool?
+        var quietHours: QuietHours?
+        var deduplicate: Bool?
+        var verifyAfterCopy: Bool?
     }
 
     init() {
         let dir = Channel.current.configDirectory
         fileURL = dir.appendingPathComponent("settings.json")
-
-        let home = FileManager.default.homeDirectoryForCurrentUser
         let stored = Self.load(fileURL)
 
-        sourcePath = stored?.sourcePath ?? home.appendingPathComponent("Downloads").path
+        // Migrate: prefer an explicit sources list; else a legacy single sourcePath;
+        // else the defaults (watch Downloads).
+        if let saved = stored?.sources, !saved.isEmpty {
+            sources = saved
+        } else if let legacy = stored?.sourcePath {
+            sources = [WatchSource(path: legacy, routing: .classify)]
+        } else {
+            sources = WatchSource.defaults
+        }
+        rules = stored?.rules ?? SortRule.defaults
+
         nasMountPath = stored?.nasMountPath ?? "/Volumes/media"
         smbURL = stored?.smbURL ?? ""
         settleSeconds = stored?.settleSeconds ?? 30
@@ -57,10 +87,30 @@ final class PorterSettings {
         debounceSeconds = stored?.debounceSeconds ?? 1
         menuBarEnabled = stored?.menuBarEnabled ?? true
         autoCheckUpdates = stored?.autoCheckUpdates ?? true
+        notificationsEnabled = stored?.notificationsEnabled ?? true
+        paused = stored?.paused ?? false
+        quietHours = stored?.quietHours ?? QuietHours()
+        deduplicate = stored?.deduplicate ?? false
+        verifyAfterCopy = stored?.verifyAfterCopy ?? false
     }
 
-    var sourceURL: URL { URL(fileURLWithPath: sourcePath) }
     var nasURL: URL { URL(fileURLWithPath: nasMountPath) }
+
+    /// Enabled source folders, deduped, excluding any that live inside the NAS
+    /// root (so Porter never tries to watch — and re-file — its own destination).
+    var activeSourceURLs: [URL] {
+        var seen = Set<String>()
+        var result: [URL] = []
+        let nas = nasMountPath
+        for source in sources where source.enabled {
+            let path = source.url.standardizedFileURL.path
+            guard !seen.contains(path) else { continue }
+            guard !path.hasPrefix(nas + "/") && path != nas else { continue }
+            seen.insert(path)
+            result.append(source.url)
+        }
+        return result
+    }
 
     // MARK: - Persistence
 
@@ -71,10 +121,13 @@ final class PorterSettings {
 
     private func save() {
         let stored = Stored(
-            sourcePath: sourcePath, nasMountPath: nasMountPath, smbURL: smbURL,
+            sources: sources, rules: rules, sourcePath: nil,
+            nasMountPath: nasMountPath, smbURL: smbURL,
             settleSeconds: settleSeconds, heartbeatSeconds: heartbeatSeconds,
             debounceSeconds: debounceSeconds, menuBarEnabled: menuBarEnabled,
-            autoCheckUpdates: autoCheckUpdates)
+            autoCheckUpdates: autoCheckUpdates, notificationsEnabled: notificationsEnabled,
+            paused: paused, quietHours: quietHours,
+            deduplicate: deduplicate, verifyAfterCopy: verifyAfterCopy)
         do {
             try FileManager.default.createDirectory(
                 at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true)

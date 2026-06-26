@@ -49,21 +49,23 @@ struct OnboardingView: View {
         case .source:  return "folder.fill"
         case .access:  return "lock.shield.fill"
         case .nas:     return "externaldrive.connected.to.line.below.fill"
-        case .login:   return "power"
-        case .menuBar: return "menubar.rectangle"
-        case .done:    return "checkmark.seal.fill"
+        case .login:    return "power"
+        case .menuBar:  return "menubar.rectangle"
+        case .features: return "sparkles"
+        case .done:     return "checkmark.seal.fill"
         }
     }
 
     @ViewBuilder private var content: some View {
         switch onboarding.step {
-        case .welcome: WelcomeStep()
-        case .source:  SourceStep(settings: settings, coordinator: coordinator)
-        case .access:  AccessStep(settings: settings, coordinator: coordinator)
-        case .nas:     NASStep(settings: settings, coordinator: coordinator)
-        case .login:   LoginStep(loginItem: loginItem)
-        case .menuBar: MenuBarStep(settings: settings)
-        case .done:    DoneStep(settings: settings)
+        case .welcome:  WelcomeStep()
+        case .source:   SourceStep(settings: settings)
+        case .access:   AccessStep(settings: settings, coordinator: coordinator)
+        case .nas:      NASStep(settings: settings, coordinator: coordinator)
+        case .login:    LoginStep(loginItem: loginItem)
+        case .menuBar:  MenuBarStep(settings: settings)
+        case .features: FeaturesStep()
+        case .done:     DoneStep(settings: settings)
         }
     }
 
@@ -104,11 +106,11 @@ private struct WelcomeStep: View {
             Text("Porter files your downloads onto your NAS — automatically.")
                 .font(.title3)
             VStack(alignment: .leading, spacing: 14) {
-                row("folder", "Watches a folder you choose")
-                row("arrow.right.circle", "Sorts each file by type onto the NAS")
+                row("folder", "Watches the folders you choose")
+                row("list.bullet.rectangle", "Sorts each file with rules you control")
                 row("menubar.rectangle", "Lives in the menu bar — always shows its status")
             }
-            Label("Takes about 30 seconds to set up.", systemImage: "clock")
+            Label("Takes about 30 seconds to set up — we'll tour the rest at the end.", systemImage: "clock")
                 .font(.callout).foregroundStyle(.secondary)
         }
     }
@@ -118,55 +120,67 @@ private struct WelcomeStep: View {
     }
 }
 
+private struct FeaturesStep: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Beyond the basics, here's what Porter can do. Everything's optional and lives in Settings — explore at your own pace.")
+                .foregroundStyle(.secondary)
+            FeatureHighlightsList()
+        }
+    }
+}
+
 private struct AccessStep: View {
     @Bindable var settings: PorterSettings
     let coordinator: SortCoordinator
-    @State private var hasAccess = false
+    @State private var blocked: [String] = []
     @State private var requested = false
 
-    private var folderName: String { settings.sourceURL.lastPathComponent }
+    private var hasAccess: Bool { blocked.isEmpty }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("macOS will ask permission for Porter to read your **\(folderName)** folder. Click Allow when it appears.")
+            Text("macOS will ask permission for Porter to read each folder you chose. Click Allow when the prompts appear.")
                 .foregroundStyle(.secondary)
 
             statusBadge
 
             if hasAccess {
-                Text("Porter can read this folder. You're good to continue.")
+                Text("Porter can read your folders. You're good to continue.")
                     .font(.callout).foregroundStyle(.secondary)
             } else {
-                Button("Allow Access to \(folderName)") { request() }
+                Button("Request Access") { request() }
                     .buttonStyle(.borderedProminent)
                 if requested {
                     Button("Prompt didn't appear? Open Full Disk Access…") {
                         coordinator.openFullDiskAccessSettings()
                     }
                     .buttonStyle(.link)
-                    Text("Add Porter with the ＋ button and switch it on. You can also continue and grant this later — Porter will keep a reminder until it's done.")
+                    Text("Add Porter with the ＋ button and switch it on. You can also continue and grant this later — Porter keeps a reminder until it's done.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
             }
         }
-        // Provoke the native per-folder prompt as soon as the step appears, by
-        // actually reading the chosen folder.
-        .onAppear { hasAccess = Permissions.canRead(settings.sourceURL) }
+        // Reading each folder provokes its native per-folder permission prompt.
+        .onAppear { refresh() }
         .task {
             while !Task.isCancelled {
-                hasAccess = Permissions.canRead(settings.sourceURL)
+                refresh()
                 try? await Task.sleep(nanoseconds: 1_000_000_000)
             }
         }
     }
 
-    private func request() {
-        requested = true
-        hasAccess = Permissions.canRead(settings.sourceURL)
+    private func request() { requested = true; refresh() }
+
+    private func refresh() {
+        blocked = settings.activeSourceURLs
+            .filter { !Permissions.canRead($0) }
+            .map { $0.lastPathComponent }
     }
 
     private var statusBadge: some View {
-        Label(hasAccess ? "Porter can read \(folderName)" : "Waiting for permission…",
+        Label(hasAccess ? "Porter can read your folders" : "Waiting on: \(blocked.joined(separator: ", "))",
               systemImage: hasAccess ? "checkmark.circle.fill" : "hourglass")
             .foregroundStyle(hasAccess ? .green : .orange)
             .font(.callout.bold())
@@ -175,62 +189,27 @@ private struct AccessStep: View {
 
 private struct SourceStep: View {
     @Bindable var settings: PorterSettings
-    let coordinator: SortCoordinator
-
-    private var presets: [(name: String, path: String)] {
-        let home = FileManager.default.homeDirectoryForCurrentUser
-        return [
-            ("Downloads", home.appendingPathComponent("Downloads").path),
-            ("Documents", home.appendingPathComponent("Documents").path),
-            ("Desktop", home.appendingPathComponent("Desktop").path)
-        ]
-    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Pick the folder Porter should watch. New files that land here get filed onto your NAS. Most people watch Downloads — but it can be any folder: your code projects, Desktop, anything.")
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Which folders should Porter watch? New files in them get filed onto your NAS. Downloads is ready to go — add more if you like.")
                 .foregroundStyle(.secondary)
-            ForEach(presets, id: \.path) { preset in
-                presetRow(name: preset.name, path: preset.path)
-            }
-            Divider()
-            HStack {
-                Text(settings.sourcePath)
-                    .font(.callout).lineLimit(1).truncationMode(.head)
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Button("Choose Other Folder…") {
-                    if let picked = chooseFolderPath(start: settings.sourcePath) {
-                        settings.sourcePath = picked
-                    }
-                }
-            }
+
+            FoldersEditor(settings: settings)
 
             Divider()
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Wait \(Int(settings.settleSeconds))s after a file appears before filing it")
-                    .font(.callout)
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text("Wait before filing a new file").font(.callout)
+                    Spacer()
+                    Text("\(Int(settings.settleSeconds))s")
+                        .font(.callout).monospacedDigit().foregroundStyle(.secondary)
+                }
                 Slider(value: $settings.settleSeconds, in: 5...120, step: 5)
-                Text("A short wait avoids grabbing a download that's still in progress. You can change this any time in Settings.")
+                Text("A short wait avoids grabbing a download that's still in progress. Change folders, rules, and timing any time in Settings.")
                     .font(.caption).foregroundStyle(.secondary)
             }
         }
-    }
-
-    private func presetRow(name: String, path: String) -> some View {
-        let selected = settings.sourcePath == path
-        return Button {
-            settings.sourcePath = path
-        } label: {
-            HStack(spacing: 10) {
-                Image(systemName: selected ? "largecircle.fill.circle" : "circle")
-                    .foregroundStyle(selected ? Color.accentColor : .secondary)
-                Text(name)
-                Spacer()
-            }
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
     }
 }
 
@@ -406,13 +385,15 @@ private struct MenuBarStep: View {
 private struct DoneStep: View {
     @Bindable var settings: PorterSettings
 
+    private var folderCount: Int { settings.sources.filter(\.enabled).count }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Label("Watching \(settings.sourceURL.lastPathComponent)", systemImage: "eye")
+            Label("Watching \(folderCount) folder\(folderCount == 1 ? "" : "s")", systemImage: "eye")
             Label("Filing to \(settings.nasMountPath)", systemImage: "externaldrive")
             Label(settings.menuBarEnabled ? "Menu bar icon on" : "Menu bar icon off",
                   systemImage: settings.menuBarEnabled ? "menubar.rectangle" : "menubar.dock.rectangle")
-            Text("Drop a file in the folder you chose and Porter files it onto the NAS within moments. Change anything later in Settings.")
+            Text("Drop a file in any watched folder and Porter files it onto the NAS within moments. Try Preview and Stats from the main window, and tune rules, conflict handling, quiet hours, and more in Settings.")
                 .foregroundStyle(.secondary)
         }
     }

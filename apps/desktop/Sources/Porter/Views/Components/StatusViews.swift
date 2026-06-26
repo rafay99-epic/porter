@@ -14,6 +14,29 @@ func chooseFolderPath(start: String) -> String? {
     return panel.runModal() == .OK ? panel.url?.path : nil
 }
 
+/// Pick a destination folder *inside* the mounted NAS and return it as a path
+/// relative to `nasRoot` (what `Mover` expects). The panel is rooted at the NAS
+/// mount and can create new folders. Picking the root returns "" (files land at
+/// the NAS root); a folder outside the NAS falls back to its own name.
+@MainActor
+func chooseNASFolder(nasRoot: String) -> String? {
+    let panel = NSOpenPanel()
+    panel.canChooseDirectories = true
+    panel.canChooseFiles = false
+    panel.canCreateDirectories = true
+    panel.allowsMultipleSelection = false
+    panel.prompt = "Choose"
+    panel.message = "Pick a folder on your NAS for these files"
+    panel.directoryURL = URL(fileURLWithPath: nasRoot)
+    guard panel.runModal() == .OK, let url = panel.url else { return nil }
+
+    let picked = url.standardizedFileURL.path
+    let root = URL(fileURLWithPath: nasRoot).standardizedFileURL.path
+    if picked == root { return "" }
+    if picked.hasPrefix(root + "/") { return String(picked.dropFirst(root.count + 1)) }
+    return url.lastPathComponent
+}
+
 /// Best-effort mount point for an `smb://user@host/share` URL: macOS mounts it at
 /// `/Volumes/<share>`. Returns nil when the URL has no share component.
 func defaultMountPoint(forSMB url: String) -> String? {
@@ -31,6 +54,7 @@ func statusColor(_ status: PorterStatus) -> Color {
     case .syncing:         return .blue
     case .sorted:          return .green
     case .paused:          return .orange
+    case .suspended:       return .gray
     case .needsPermission, .error: return .red
     }
 }
@@ -88,6 +112,8 @@ struct StatusHeaderView: View {
 struct ActivityListView: View {
     let entries: [ActivityEntry]
     var maxHeight: CGFloat = 260
+    /// When set, a moved row shows a "move back" button that calls this.
+    var onUndo: ((ActivityEntry) -> Void)?
 
     var body: some View {
         if entries.isEmpty {
@@ -101,13 +127,14 @@ struct ActivityListView: View {
                     .font(.caption).foregroundStyle(.tertiary)
                     .multilineTextAlignment(.center)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .padding(.vertical, 28)
+            .frame(maxWidth: .infinity)
+            .frame(height: 150)
+            .padding(.vertical, 16)
         } else {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
                     ForEach(entries) { entry in
-                        ActivityRow(entry: entry)
+                        ActivityRow(entry: entry, onUndo: onUndo)
                         if entry.id != entries.last?.id { Divider() }
                     }
                 }
@@ -121,6 +148,8 @@ struct ActivityListView: View {
 /// (reason, in red).
 struct ActivityRow: View {
     let entry: ActivityEntry
+    var onUndo: ((ActivityEntry) -> Void)?
+    @State private var hovering = false
 
     var body: some View {
         HStack(spacing: 8) {
@@ -132,25 +161,37 @@ struct ActivityRow: View {
                     .font(.callout)
                     .lineLimit(1)
                     .truncationMode(.middle)
+                    .strikethrough(entry.undone, color: .secondary)
                 Text(detail)
                     .font(.caption2)
                     .foregroundStyle(entry.isFailure ? .red : .secondary)
                     .lineLimit(1)
             }
             Spacer()
+            if entry.undone {
+                Text("Moved back").font(.caption2).foregroundStyle(.tertiary)
+            } else if let onUndo, entry.canUndo {
+                Button("Move Back") { onUndo(entry) }
+                    .buttonStyle(.borderless)
+                    .font(.caption2)
+                    .opacity(hovering ? 1 : 0)
+                    .help("Move this file back to where it came from")
+            }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
+        .contentShape(Rectangle())
+        .onHover { hovering = $0 }
     }
 
     private var iconName: String {
         if entry.isFailure { return "exclamationmark.triangle" }
-        return entry.category?.symbolName ?? "doc"
+        return entry.destination.map { FileCategory.symbol(forFolder: $0) } ?? "doc"
     }
 
     private var detail: String {
         switch entry.outcome {
-        case .moved(let folder): return "→ \(folder)"
+        case .moved(let folder): return entry.undone ? "moved back from \(folder)" : "→ \(folder)"
         case .failed(let reason): return reason
         }
     }

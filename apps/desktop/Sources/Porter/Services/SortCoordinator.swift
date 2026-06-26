@@ -9,6 +9,7 @@ enum PorterStatus: Equatable {
     case syncing            // a sweep is in flight
     case sorted(Int)        // transient confirmation after a sweep moved files
     case paused             // NAS not mounted
+    case suspended(String)  // intentionally not sorting (user pause / quiet hours)
     case needsPermission    // can't read the source folder (Full Disk Access)
     case error(String)      // last sweep had failures
 
@@ -20,6 +21,7 @@ enum PorterStatus: Equatable {
         case .syncing:         return "arrow.triangle.2.circlepath"
         case .sorted:          return "checkmark.circle.fill"
         case .paused:          return "externaldrive.badge.xmark"
+        case .suspended:       return "pause.circle"
         case .needsPermission: return "lock.shield"
         case .error:           return "exclamationmark.triangle"
         }
@@ -31,6 +33,7 @@ enum PorterStatus: Equatable {
         case .syncing:         return "Sorting…"
         case .sorted(let n):   return "Sorted \(n) file\(n == 1 ? "" : "s")"
         case .paused:          return "NAS not mounted"
+        case .suspended(let m): return m
         case .needsPermission: return "Needs file access"
         case .error(let msg):  return msg
         }
@@ -74,6 +77,8 @@ final class SortCoordinator {
     let settings: PorterSettings
 
     private let log = AppInfo.logger("coordinator")
+    private let notifier = Notifier()
+    private let statsStore = StatsStore(directory: Channel.current.statsDirectory)
     private let watcherQueue = DispatchQueue(label: "\(AppInfo.bundleIdentifier).watcher", qos: .utility)
     private var watcher: FolderWatcher?
     private var debounceTask: Task<Void, Never>?
@@ -82,6 +87,10 @@ final class SortCoordinator {
     private var isSweeping = false
     private var resweepQueued = false
     private var sortedRevertTask: Task<Void, Never>?
+    /// Standardized paths of files the user pulled back with "Undo" — skipped by the
+    /// next sweeps so they aren't immediately re-sorted. Pruned of vanished paths
+    /// each sweep (once the user moves the file away it drops out naturally).
+    private var ignoredPaths: Set<String> = []
 
     private static let activityCap = 100
 
@@ -95,7 +104,8 @@ final class SortCoordinator {
         guard !started else { return }
         started = true
         FileLog.shared.pruneOldLogs()
-        log.info("\(Channel.current.displayName) launched — watching \(settings.sourcePath), filing to \(settings.nasMountPath)")
+        log.info("\(Channel.current.displayName) launched — watching \(settings.activeSourceURLs.count) folder(s), filing to \(settings.nasMountPath)")
+        if settings.notificationsEnabled { notifier.requestAuthorizationIfNeeded() }
         observeVolumeChanges()
         startWatching()
         startHeartbeat()
@@ -114,20 +124,38 @@ final class SortCoordinator {
         Task { await requestSweep() }
     }
 
+    var isPaused: Bool { settings.paused }
+
+    /// Toggle the global pause. Resuming kicks off a sweep immediately so a backlog
+    /// that built up while paused is cleared right away.
+    func setPaused(_ paused: Bool) {
+        guard settings.paused != paused else { return }
+        settings.paused = paused
+        if paused {
+            status = .suspended("Paused")
+            log.info("sorting paused by user")
+        } else {
+            log.info("sorting resumed by user")
+            Task { await requestSweep() }
+        }
+    }
+
     // MARK: - Watching
 
     private func startWatching() {
         watcher?.stop()
-        let w = FolderWatcher(folder: settings.sourceURL, queue: watcherQueue) { [weak self] paths in
+        let folders = settings.activeSourceURLs
+        let w = FolderWatcher(folders: folders, queue: watcherQueue) { [weak self] paths in
             Task { @MainActor in self?.fileSystemChanged(paths) }
         }
         w.start()
         watcher = w
-        log.info("watching \(settings.sourcePath)")
+        let names = folders.map(\.lastPathComponent).joined(separator: ", ")
+        log.info("watching \(folders.count) folder(s): \(names.isEmpty ? "(none)" : names)")
     }
 
     private func fileSystemChanged(_ paths: [String] = []) {
-        log.debug("fsevent: \(paths.count) path(s) changed in \(settings.sourcePath)")
+        log.debug("fsevent: \(paths.count) path(s) changed")
         // Debounce a burst of events into one sweep ~1s later. The per-file settle
         // check still protects against grabbing a download that's mid-write.
         let delay = max(0.1, settings.debounceSeconds)
@@ -174,13 +202,25 @@ final class SortCoordinator {
     }
 
     private func runSweep() async {
+        // Intentional suspension takes precedence over everything: a user pause or
+        // an active quiet-hours window means "don't touch files", full stop.
+        if settings.paused {
+            status = .suspended("Paused")
+            return
+        }
+        if settings.quietHours.isQuiet(at: Date()) {
+            status = .suspended("Quiet hours until \(settings.quietHours.endLabel)")
+            return
+        }
+
         // Probe file access FIRST — independent of the NAS. This is what triggers
         // the Downloads TCC prompt on first launch, and it surfaces a missing grant
         // even while the share is offline (a paused-but-also-unreadable app would
         // otherwise hide the real blocker behind "NAS not mounted").
-        guard Permissions.canRead(settings.sourceURL) else {
+        // Permission: if any enabled source can't be read (TCC), surface it.
+        if let blocked = settings.activeSourceURLs.first(where: { !Permissions.canRead($0) }) {
             if status != .needsPermission {
-                log.error("cannot read \(settings.sourcePath) — grant Porter access to that folder (or Full Disk Access) in System Settings")
+                log.error("cannot read \(blocked.path) — grant Porter access to that folder (or Full Disk Access) in System Settings")
             }
             status = .needsPermission
             return
@@ -194,15 +234,23 @@ final class SortCoordinator {
         isSweeping = true
         status = .syncing
         progress = nil
-        let sources = [settings.sourceURL]
+        // Drop ignore entries whose file is gone (user dealt with it) so the set
+        // doesn't grow unbounded.
+        ignoredPaths = ignoredPaths.filter { FileManager.default.fileExists(atPath: $0) }
+        let sources = settings.sources
+        let rules = settings.rules
         let nasRoot = settings.nasURL
         let settle = settings.settleSeconds
+        let dedupe = settings.deduplicate
+        let verify = settings.verifyAfterCopy
+        let ignoring = ignoredPaths
         // Capture self strongly: it's a @MainActor (Sendable) object and the task is
         // short-lived, so there's no cycle and the @Sendable progress callback can
         // hop back to the main actor to publish progress.
         let coordinator = self
         let summary = await Task.detached(priority: .utility) {
-            Sorter(sources: sources, nasRoot: nasRoot, settleSeconds: settle).sweep { completed, total in
+            Sorter(sources: sources, rules: rules, nasRoot: nasRoot, settleSeconds: settle,
+                   deduplicate: dedupe, verifyAfterCopy: verify).sweep(ignoring: ignoring) { completed, total in
                 Task { @MainActor in
                     coordinator.progress = total > 0 ? SortProgress(completed: completed, total: total) : nil
                 }
@@ -233,7 +281,12 @@ final class SortCoordinator {
             }
         }
 
-        if summary.readDenied {
+        if summary.nasLost {
+            // The share vanished mid-sweep — pause; the mount observer / heartbeat
+            // resumes when it's back.
+            nasMounted = false
+            status = .paused
+        } else if summary.readDenied {
             status = .needsPermission
         } else if summary.failed > 0 {
             status = .error("\(summary.failed) move\(summary.failed == 1 ? "" : "s") failed")
@@ -244,8 +297,33 @@ final class SortCoordinator {
         }
 
         if summary.didWork {
-            log.info("sweep done — moved \(summary.moved) failed \(summary.failed) skipped \(summary.skipped)")
+            log.info("sweep done — moved \(summary.moved) failed \(summary.failed) skipped \(summary.skipped) deduped \(summary.deduped)")
+            if settings.notificationsEnabled {
+                notifier.notifySorted(summary.moved)
+                notifier.notifyFailures(summary.failed)
+            }
+            recordStats(from: summary)
         }
+    }
+
+    /// Persist one StatRecord per successful move for the stats dashboard. Done off
+    /// the main actor — stats are best-effort and must never block a sweep.
+    private func recordStats(from summary: SweepSummary) {
+        let records: [StatRecord] = summary.entries.compactMap { entry in
+            guard case .moved = entry.outcome, let destination = entry.destination else { return nil }
+            return StatRecord(date: entry.date,
+                              category: StatsStore.category(fromDestination: destination),
+                              bytes: entry.byteCount)
+        }
+        guard !records.isEmpty else { return }
+        let store = statsStore
+        Task.detached(priority: .utility) { store.append(records) }
+    }
+
+    /// Load the full persisted move history for the stats dashboard.
+    func loadStats() async -> [StatRecord] {
+        let store = statsStore
+        return await Task.detached(priority: .userInitiated) { store.load() }.value
     }
 
     /// Briefly show a "Sorted N" confirmation (icon + title go green/check), then
@@ -257,6 +335,57 @@ final class SortCoordinator {
             try? await Task.sleep(nanoseconds: 2_500_000_000)
             guard !Task.isCancelled, let self else { return }
             if case .sorted = self.status { self.status = .idle }
+        }
+    }
+
+    // MARK: - Dry-run preview
+
+    /// Compute the moves a sweep would make right now, without touching any file.
+    /// Runs the same triage off the main actor so a big folder doesn't hitch the UI.
+    func previewPlan() async -> [PlannedMove] {
+        let sources = settings.sources
+        let rules = settings.rules
+        let nasRoot = settings.nasURL
+        let settle = settings.settleSeconds
+        let ignoring = ignoredPaths
+        return await Task.detached(priority: .userInitiated) {
+            Sorter(sources: sources, rules: rules, nasRoot: nasRoot, settleSeconds: settle)
+                .plan(ignoring: ignoring)
+        }.value
+    }
+
+    // MARK: - Undo
+
+    /// Move a sorted file back to the folder it came from. Best-effort: uses the
+    /// same xattr-stripping copy as the forward move (so the trip back over SMB
+    /// also succeeds). The restored file is added to `ignoredPaths` so the next
+    /// sweep doesn't just re-file it. Marks the activity row as undone on success.
+    func undo(_ entry: ActivityEntry) {
+        guard entry.canUndo,
+              let finalPath = entry.finalPath,
+              let sourcePath = entry.sourcePath else { return }
+        let from = URL(fileURLWithPath: finalPath)
+        let destDir = URL(fileURLWithPath: sourcePath).deletingLastPathComponent()
+        guard FileManager.default.fileExists(atPath: finalPath) else {
+            log.error("undo: \(entry.fileName) is no longer at \(finalPath)")
+            return
+        }
+        let nasRoot = settings.nasURL
+        Task {
+            let restored: URL? = await Task.detached(priority: .userInitiated) {
+                try? Mover(nasRoot: nasRoot).move(from, intoDirectory: destDir)
+            }.value
+            guard let restored else {
+                status = .error("Couldn't move \(entry.fileName) back")
+                log.error("undo failed for \(entry.fileName)")
+                return
+            }
+            ignoredPaths.insert(restored.standardizedFileURL.path)
+            if let idx = activity.firstIndex(where: { $0.id == entry.id }) {
+                activity[idx].undone = true
+            }
+            if totalMoved > 0 { totalMoved -= 1 }
+            log.info("undo: moved \(entry.fileName) back to \(destDir.lastPathComponent)/")
         }
     }
 
@@ -280,6 +409,10 @@ final class SortCoordinator {
             await self.requestSweep()
         }
     }
+
+    /// Called when the user flips notifications on in Settings — prompts for the
+    /// system grant if we haven't asked yet.
+    func enableNotifications() { notifier.requestAuthorizationIfNeeded() }
 
     func revealLogInFinder() {
         NSWorkspace.shared.activateFileViewerSelecting([FileLog.shared.currentLogFileURL()])
