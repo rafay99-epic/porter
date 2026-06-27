@@ -14,6 +14,13 @@
 set -euo pipefail
 
 IDENTITY_NAME="${CODESIGN_IDENTITY:-Porter Local Signing}"
+# Allowlist the identity name (letters, digits, space, . _ -) so it can't inject
+# newlines or OpenSSL-config metacharacters when written into req.cnf below.
+case "$IDENTITY_NAME" in
+  *[!A-Za-z0-9._\ -]*|"")
+    echo "CODESIGN_IDENTITY must be non-empty and contain only letters, digits, spaces, '.', '_', '-'." >&2
+    exit 1 ;;
+esac
 WORK="$(mktemp -d)"; trap 'rm -rf "$WORK"' EXIT
 KEY="$WORK/key.pem"; CERT="$WORK/cert.pem"; P12="$WORK/signing.p12"
 
