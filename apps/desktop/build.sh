@@ -87,11 +87,30 @@ if [ ! -f "$ICON_CACHE" ]; then
 fi
 [ -f "$ICON_CACHE" ] && cp "$ICON_CACHE" "$APP/Contents/Resources/AppIcon.icns"
 
-# Sign ad-hoc by default; set CODESIGN_IDENTITY to a Developer ID for notarization
-# (adds hardened runtime + timestamp).
-SIGN_ID="${CODESIGN_IDENTITY:--}"
-SIGN_OPTS=(--force --sign "$SIGN_ID")
-[[ "$SIGN_ID" != "-" ]] && SIGN_OPTS+=(--options runtime --timestamp)
+# Code signing. CODESIGN_IDENTITY defaults to ad-hoc ("-"), which re-randomises the
+# signature every build — macOS keys TCC grants (Full Disk Access, etc.) and the
+# Gatekeeper identity to that signature, so an ad-hoc update looks like a brand-new
+# app and silently drops permissions. Setting CODESIGN_IDENTITY to a stable
+# self-signed identity (see Scripts/make-signing-cert.sh) gives every build the same
+# designated requirement, so the grant persists across updates. No Apple account /
+# notarization involved.
+SIGN_IDENTITY="${CODESIGN_IDENTITY:--}"
+if [ "$SIGN_IDENTITY" != "-" ]; then
+  # exact quoted-name match; here-string (not pipe) avoids pipefail/SIGPIPE false
+  # negatives; `|| true` so a keychain miss falls back to ad-hoc instead of aborting.
+  SIGN_IDENTITIES="$(security find-identity -p codesigning 2>/dev/null || true)"
+  if ! grep -qF "\"$SIGN_IDENTITY\"" <<< "$SIGN_IDENTITIES"; then
+    echo "CODESIGN_IDENTITY=\"$SIGN_IDENTITY\" not found in keychain; falling back to ad-hoc." >&2
+    SIGN_IDENTITY="-"
+  fi
+fi
 echo "Signing…"
-codesign "${SIGN_OPTS[@]}" "$APP"
+if [ "$SIGN_IDENTITY" = "-" ]; then
+  codesign --force --sign - "$APP"
+else
+  echo "Signing with stable identity: $SIGN_IDENTITY (TCC grant persists across builds)"
+  # Porter has no .entitlements file, so none is passed; if one is ever added, pass
+  # --entitlements <path> here too or this --deep re-sign would strip it.
+  codesign --force --deep --sign "$SIGN_IDENTITY" "$APP"
+fi
 echo "Done → $PWD/$APP"

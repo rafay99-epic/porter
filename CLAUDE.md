@@ -121,6 +121,37 @@ swiftlint              # lint (CI: --reporter github-actions-logging)
 ./make-dmg.sh          # package the channel's DMG
 ```
 
+## Code signing (stable self-signed identity)
+
+Builds sign **ad-hoc** by default (`codesign --sign -`). Ad-hoc signatures
+re-randomise every build, and macOS keys TCC grants (Full Disk Access, etc.) **and**
+the Gatekeeper identity to the signature — so an ad-hoc *update* looks like a new app
+and silently drops permissions. The single load-bearing reason for stable signing:
+sign every build with one **self-signed** cert so the designated requirement
+(`identifier <bundle-id> and certificate leaf = H"…"`) is stable and the grant
+survives auto-updates. No Apple account / notarization is involved; **do not**
+re-introduce a Developer ID/team.
+
+- **`build.sh`** reads `CODESIGN_IDENTITY` (the env var — reuse it, don't invent a
+  new one). Default `-` = ad-hoc. If the name isn't in the keychain it **warns and
+  falls back to ad-hoc** (never aborts). With a real identity it re-signs
+  `--force --deep`. Porter has **no `.entitlements` file**, so none is passed; if one
+  is ever added you MUST add `--entitlements <path>` there too or the `--deep` re-sign
+  strips it.
+- **`Scripts/make-signing-cert.sh`** — one-time local generator: makes a self-signed
+  codeSigning cert, imports it into the login keychain, and prints the two CI secrets.
+- **`.github/scripts/setup-signing.sh`** — CI imports the cert into an ephemeral
+  keychain and exports `CODESIGN_IDENTITY` via `$GITHUB_ENV`. Wired into the **release
+  jobs only** — `ci.yml` (push to `main`) and `nightly.yml` (push to `nightly`), both
+  trusted branch pushes. **Never** add it to the PR `package` job: a fork PR could run
+  untrusted code and exfiltrate the cert. Missing secrets → it warns and the build
+  goes ad-hoc (never fails the release).
+- Secrets the human adds once: **`MACOS_SIGN_CERT_P12`** (base64 of the `.p12`) and
+  **`MACOS_SIGN_CERT_PASSWORD`**. One cert/.p12 can sign every app in the family;
+  each app's distinct bundle id still gets its own designated requirement.
+- `make-dmg.sh` only `cp -R`s the already-signed app into a DMG — it does **not**
+  re-sign, so it never clobbers the identity. Keep it that way.
+
 ## Logging
 
 `AppInfo.logger(_:)` → `PorterLog`, which tees every line to Apple unified logging
