@@ -20,11 +20,14 @@ KEY="$WORK/key.pem"; CERT="$WORK/cert.pem"; P12="$WORK/signing.p12"
 read -r -s -p "Choose a password for the exported .p12 (the CI secret): " P12_PW; echo
 [ -n "$P12_PW" ] || { echo "Password cannot be empty." >&2; exit 1; }
 
+# Escape `/` in the CN so a name with slashes can't break -subj DN parsing.
+SUBJ_CN="${IDENTITY_NAME//\//\\/}"
+# Keep stderr visible (only silence stdout) so cert-generation failures are diagnosable.
 openssl req -x509 -newkey rsa:2048 -keyout "$KEY" -out "$CERT" -days 3650 -nodes \
-  -subj "/CN=$IDENTITY_NAME" \
+  -subj "/CN=$SUBJ_CN" \
   -addext "basicConstraints=critical,CA:false" \
   -addext "keyUsage=critical,digitalSignature" \
-  -addext "extendedKeyUsage=critical,codeSigning" >/dev/null 2>&1
+  -addext "extendedKeyUsage=critical,codeSigning" >/dev/null
 
 # Legacy PBE so macOS `security import` can read it (OpenSSL 3 default cannot).
 # env: keeps the password off argv; inline assignment keeps it out of later procs.
