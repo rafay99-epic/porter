@@ -1,0 +1,18 @@
+apps/desktop/Sources/Porter/Services/OnboardingModel.swift
+  h_1e0ba4a9f2a4b4 12-14,20-21
+apps/desktop/Sources/Porter/Views/Components/FoldersEditor.swift
+  h_1e0ba4a9f2a4b4 4-7,12,14-19,21-22,29-30,39,45-56,58-63,65-67,69-76,78,80-82,85-87,90-113
+apps/desktop/Sources/Porter/Views/Onboarding/OnboardingView.swift
+  h_1e0ba4a9f2a4b4 182-183,189-195,197
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "dc712388f25c7475298f455dfc83cc3e27aaae0e",
+  "prompts": {},
+  "humans": {
+    "h_1e0ba4a9f2a4b4": {
+      "author": "Abdul Rafay <99marafay@gmail.com>"
+    }
+  }
+}
