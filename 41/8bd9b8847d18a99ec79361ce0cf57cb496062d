@@ -1,0 +1,20 @@
+apps/desktop/Sources/Porter/Views/Components/FoldersEditor.swift
+  h_1e0ba4a9f2a4b4 69-70,94,97,100-101
+apps/desktop/Sources/PorterCore/Models/WatchSource.swift
+  h_1e0ba4a9f2a4b4 9-10,21-22,27-42
+apps/desktop/Sources/PorterCore/Sorting/Sorter.swift
+  h_1e0ba4a9f2a4b4 142,144,154,156,161,180-213
+apps/desktop/Tests/PorterCoreTests/MoverTests.swift
+  h_1e0ba4a9f2a4b4 184-213
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "418bd9b8847d18a99ec79361ce0cf57cb496062d",
+  "prompts": {},
+  "humans": {
+    "h_1e0ba4a9f2a4b4": {
+      "author": "Abdul Rafay <99marafay@gmail.com>"
+    }
+  }
+}
