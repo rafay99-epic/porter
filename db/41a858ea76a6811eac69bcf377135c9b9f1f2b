@@ -1,0 +1,22 @@
+apps/desktop/Sources/Porter/App/PorterApp.swift
+  h_1e0ba4a9f2a4b4 79,84-88
+apps/desktop/Sources/Porter/Services/OnboardingModel.swift
+  h_1e0ba4a9f2a4b4 13-15,19-26
+apps/desktop/Sources/Porter/Views/Components/FeatureHighlights.swift
+  h_1e0ba4a9f2a4b4 1-112
+apps/desktop/Sources/Porter/Views/Onboarding/OnboardingView.swift
+  h_1e0ba4a9f2a4b4 52-55,61-68,93-95,112-113,116,126-135,399
+apps/desktop/Sources/Porter/Views/SettingsView.swift
+  h_1e0ba4a9f2a4b4 14,150-151,154
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "db41a858ea76a6811eac69bcf377135c9b9f1f2b",
+  "prompts": {},
+  "humans": {
+    "h_1e0ba4a9f2a4b4": {
+      "author": "Abdul Rafay <99marafay@gmail.com>"
+    }
+  }
+}
