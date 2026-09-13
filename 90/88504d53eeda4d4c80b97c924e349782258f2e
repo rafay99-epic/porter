@@ -1,0 +1,64 @@
+.github/workflows/website.yml
+  h_1e0ba4a9f2a4b4 1-67
+apps/web/.prettierignore
+  h_1e0ba4a9f2a4b4 1-3
+apps/web/.prettierrc.json
+  h_1e0ba4a9f2a4b4 1-7
+apps/web/README.md
+  h_1e0ba4a9f2a4b4 12
+apps/web/package.json
+  h_1e0ba4a9f2a4b4 10-13,31
+apps/web/src/App.tsx
+  h_1e0ba4a9f2a4b4 18-38
+apps/web/src/components/appkit/Dashboard.tsx
+  h_1e0ba4a9f2a4b4 2-8
+apps/web/src/components/appkit/RulesPanel.tsx
+  h_1e0ba4a9f2a4b4 7-18
+apps/web/src/components/appkit/SettingsWindow.tsx
+  h_1e0ba4a9f2a4b4 21-29,44-49
+apps/web/src/components/appkit/StatsWindow.tsx
+  h_1e0ba4a9f2a4b4 44-47
+apps/web/src/components/brand.tsx
+  h_1e0ba4a9f2a4b4 11-18,92-99
+apps/web/src/components/editorial.tsx
+  h_1e0ba4a9f2a4b4 88-95
+apps/web/src/index.css
+  h_1e0ba4a9f2a4b4 107-108
+apps/web/src/lib/gsap.ts
+  h_1e0ba4a9f2a4b4 10
+apps/web/src/sections/Colophon.tsx
+  h_1e0ba4a9f2a4b4 69-71
+apps/web/src/sections/Control.tsx
+  h_1e0ba4a9f2a4b4 60-61
+apps/web/src/sections/Destinations.tsx
+  h_1e0ba4a9f2a4b4 36-38,47,58,62
+apps/web/src/sections/Install.tsx
+  h_1e0ba4a9f2a4b4 9-23,114-115
+apps/web/src/sections/Intake.tsx
+  h_1e0ba4a9f2a4b4 9-16
+apps/web/src/sections/Proof.tsx
+  h_1e0ba4a9f2a4b4 9-13,15-19,29
+apps/web/src/sections/Watch.tsx
+  h_1e0ba4a9f2a4b4 60-62
+apps/web/src/sections/WhyItWorks.tsx
+  h_1e0ba4a9f2a4b4 67-68
+apps/web/tailwind.config.js
+  h_1e0ba4a9f2a4b4 48-55,58-63,73-76
+bun.lock
+  h_1e0ba4a9f2a4b4 2-4,8-9,19,30,33,40-335
+package.json
+  h_1e0ba4a9f2a4b4 20
+packages/core/package.json
+  h_1e0ba4a9f2a4b4 15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "9088504d53eeda4d4c80b97c924e349782258f2e",
+  "prompts": {},
+  "humans": {
+    "h_1e0ba4a9f2a4b4": {
+      "author": "Abdul Rafay <99marafay@gmail.com>"
+    }
+  }
+}
