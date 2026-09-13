@@ -1,0 +1,48 @@
+apps/desktop/Sources/Porter/Services/PorterSettings.swift
+  h_1e0ba4a9f2a4b4 11-13,17-21,39-41,57-67,79-94,104-105
+apps/desktop/Sources/Porter/Services/SortCoordinator.swift
+  h_1e0ba4a9f2a4b4 98,121-122,127-128,132,183-184,186,200-201,209,240-245
+apps/desktop/Sources/Porter/Views/Components/FoldersEditor.swift
+  h_1e0ba4a9f2a4b4 1-91
+apps/desktop/Sources/Porter/Views/Components/RulesEditor.swift
+  h_1e0ba4a9f2a4b4 1-178
+apps/desktop/Sources/Porter/Views/Components/StatusViews.swift
+  h_1e0ba4a9f2a4b4 148
+apps/desktop/Sources/Porter/Views/DashboardView.swift
+  h_1e0ba4a9f2a4b4 97,107-115
+apps/desktop/Sources/Porter/Views/Onboarding/OnboardingView.swift
+  h_1e0ba4a9f2a4b4 61,124,127,131,137,140,147,152-153,156,162-167,171,182-183,185-186,193,372-373,376,380
+apps/desktop/Sources/Porter/Views/SettingsView.swift
+  h_1e0ba4a9f2a4b4 5-6,18-19,22,26-27,34,42-43,54,89-116,120,126-127,129,135,141
+apps/desktop/Sources/PorterCore/Models/ActivityEntry.swift
+  h_1e0ba4a9f2a4b4 10-12,21,25
+apps/desktop/Sources/PorterCore/Models/FileCategory.swift
+  h_1e0ba4a9f2a4b4 40-50
+apps/desktop/Sources/PorterCore/Models/SortRule.swift
+  h_1e0ba4a9f2a4b4 1-93
+apps/desktop/Sources/PorterCore/Models/WatchSource.swift
+  h_1e0ba4a9f2a4b4 1-37
+apps/desktop/Sources/PorterCore/Sorting/Mover.swift
+  h_1e0ba4a9f2a4b4 32-35,37-38,80-97,99-107,110
+apps/desktop/Sources/PorterCore/Sorting/RuleEngine.swift
+  h_1e0ba4a9f2a4b4 3-13,15
+apps/desktop/Sources/PorterCore/Sorting/Sorter.swift
+  h_1e0ba4a9f2a4b4 15-17,28-29,33,35,53,57,62-64,80-81,90,93,98,103,105-110,117-124,129
+apps/desktop/Sources/PorterCore/Watch/FolderWatcher.swift
+  h_1e0ba4a9f2a4b4 14,19-22,28,44
+apps/desktop/Tests/PorterCoreTests/MoverTests.swift
+  h_1e0ba4a9f2a4b4 35,50,67,75,81-82,88-116,118
+apps/desktop/Tests/PorterCoreTests/RuleEngineTests.swift
+  h_1e0ba4a9f2a4b4 4-17,21-40,43-49,70-71
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "6e73be9d9e3593051e437af9ab21028429c92a6a",
+  "prompts": {},
+  "humans": {
+    "h_1e0ba4a9f2a4b4": {
+      "author": "Abdul Rafay <99marafay@gmail.com>"
+    }
+  }
+}
