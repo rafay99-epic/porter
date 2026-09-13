@@ -1,0 +1,18 @@
+.github/scripts/bump-cask.sh
+  h_1e0ba4a9f2a4b4 1-68
+.github/workflows/ci.yml
+  h_1e0ba4a9f2a4b4 92-106
+.github/workflows/nightly.yml
+  h_1e0ba4a9f2a4b4 77-91
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "c945b25aec17602b050b7e12dcbd981fef4ef20b",
+  "prompts": {},
+  "humans": {
+    "h_1e0ba4a9f2a4b4": {
+      "author": "Abdul Rafay <99marafay@gmail.com>"
+    }
+  }
+}
