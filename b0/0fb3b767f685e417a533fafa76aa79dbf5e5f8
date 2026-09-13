@@ -1,0 +1,18 @@
+.github/scripts/promote.sh
+  h_1e0ba4a9f2a4b4 1-122
+.github/scripts/promotion.sh
+  h_1e0ba4a9f2a4b4 1-83
+.github/workflows/promotion.yml
+  h_1e0ba4a9f2a4b4 1-181
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "b00fb3b767f685e417a533fafa76aa79dbf5e5f8",
+  "prompts": {},
+  "humans": {
+    "h_1e0ba4a9f2a4b4": {
+      "author": "Abdul Rafay <99marafay@gmail.com>"
+    }
+  }
+}
