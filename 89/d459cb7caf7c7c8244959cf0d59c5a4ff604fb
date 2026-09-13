@@ -1,0 +1,24 @@
+apps/desktop/Sources/Porter/Views/Components/RulesEditor.swift
+  h_1e0ba4a9f2a4b4 134-139,141-144,149-153,158-222,229-237,246-251,253-259,261-267,285,289,314,316-319,327-387
+apps/desktop/Sources/PorterCore/Models/FileMetadata.swift
+  h_1e0ba4a9f2a4b4 1-72
+apps/desktop/Sources/PorterCore/Models/SortRule.swift
+  h_1e0ba4a9f2a4b4 7,13-19,22-27,30,33,35,37,40-55,61-67,76-82,88-98
+apps/desktop/Sources/PorterCore/Sorting/RuleEngine.swift
+  h_1e0ba4a9f2a4b4 11-23,25,29
+apps/desktop/Sources/PorterCore/Sorting/Sorter.swift
+  h_1e0ba4a9f2a4b4 162-163,170-173,186,191
+apps/desktop/Tests/PorterCoreTests/RuleEngineTests.swift
+  h_1e0ba4a9f2a4b4 51-97
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "89d459cb7caf7c7c8244959cf0d59c5a4ff604fb",
+  "prompts": {},
+  "humans": {
+    "h_1e0ba4a9f2a4b4": {
+      "author": "Abdul Rafay <99marafay@gmail.com>"
+    }
+  }
+}
