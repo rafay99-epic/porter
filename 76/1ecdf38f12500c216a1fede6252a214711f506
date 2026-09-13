@@ -1,0 +1,18 @@
+apps/desktop/Sources/Porter/Views/Components/FoldersEditor.swift
+  h_1e0ba4a9f2a4b4 17,39,68-70
+apps/desktop/Sources/Porter/Views/Components/RulesEditor.swift
+  h_1e0ba4a9f2a4b4 31,88,105,108,137-143
+apps/desktop/Sources/Porter/Views/Components/StatusViews.swift
+  h_1e0ba4a9f2a4b4 17-39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "761ecdf38f12500c216a1fede6252a214711f506",
+  "prompts": {},
+  "humans": {
+    "h_1e0ba4a9f2a4b4": {
+      "author": "Abdul Rafay <99marafay@gmail.com>"
+    }
+  }
+}
