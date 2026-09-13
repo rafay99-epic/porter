@@ -1,0 +1,20 @@
+apps/desktop/Sources/Porter/Views/Components/RulesEditor.swift
+  h_1e0ba4a9f2a4b4 197,214-225
+apps/desktop/Sources/PorterCore/Sorting/DestinationTemplate.swift
+  h_1e0ba4a9f2a4b4 1-49
+apps/desktop/Sources/PorterCore/Sorting/Sorter.swift
+  h_1e0ba4a9f2a4b4 170-171,173
+apps/desktop/Tests/PorterCoreTests/DestinationTemplateTests.swift
+  h_1e0ba4a9f2a4b4 1-42
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "27d7cbf79544a79c710268439c95601981f12f15",
+  "prompts": {},
+  "humans": {
+    "h_1e0ba4a9f2a4b4": {
+      "author": "Abdul Rafay <99marafay@gmail.com>"
+    }
+  }
+}
