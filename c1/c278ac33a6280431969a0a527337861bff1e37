@@ -1,0 +1,26 @@
+apps/desktop/Sources/Porter/Services/PorterSettings.swift
+  h_1e0ba4a9f2a4b4 40-43,63-64,93-94,129-130
+apps/desktop/Sources/Porter/Services/SortCoordinator.swift
+  h_1e0ba4a9f2a4b4 244-245,252-253,300
+apps/desktop/Sources/Porter/Views/SettingsView.swift
+  h_1e0ba4a9f2a4b4 62-68
+apps/desktop/Sources/PorterCore/Sorting/Checksum.swift
+  h_1e0ba4a9f2a4b4 1-33
+apps/desktop/Sources/PorterCore/Sorting/Mover.swift
+  h_1e0ba4a9f2a4b4 34-39,47-48,50-51,60-61,68-81,100-106
+apps/desktop/Sources/PorterCore/Sorting/Sorter.swift
+  h_1e0ba4a9f2a4b4 8-9,21,51-54,56-57,62-63,91-92,102-104,256
+apps/desktop/Tests/PorterCoreTests/MoverTests.swift
+  h_1e0ba4a9f2a4b4 105-146
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "c1c278ac33a6280431969a0a527337861bff1e37",
+  "prompts": {},
+  "humans": {
+    "h_1e0ba4a9f2a4b4": {
+      "author": "Abdul Rafay <99marafay@gmail.com>"
+    }
+  }
+}
