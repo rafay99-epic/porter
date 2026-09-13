@@ -1,0 +1,16 @@
+apps/desktop/Sources/Porter/Views/Components/FeatureHighlights.swift
+  h_1e0ba4a9f2a4b4 36
+apps/desktop/Sources/Porter/Views/DashboardView.swift
+  h_1e0ba4a9f2a4b4 219-227,229-231,233-234,236-238
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "2cbe99ea94275c0bd2eb33ca8bc3319a029fa880",
+  "prompts": {},
+  "humans": {
+    "h_1e0ba4a9f2a4b4": {
+      "author": "Abdul Rafay <99marafay@gmail.com>"
+    }
+  }
+}
