@@ -1,0 +1,28 @@
+apps/desktop/Sources/Porter/Services/PorterSettings.swift
+  h_1e0ba4a9f2a4b4 36-39,57-58,85-86,120-121
+apps/desktop/Sources/Porter/Services/SortCoordinator.swift
+  h_1e0ba4a9f2a4b4 12,24,36,127-142,205-215
+apps/desktop/Sources/Porter/Views/Components/StatusViews.swift
+  h_1e0ba4a9f2a4b4 57
+apps/desktop/Sources/Porter/Views/DashboardView.swift
+  h_1e0ba4a9f2a4b4 153-159,165-177,222-224
+apps/desktop/Sources/Porter/Views/MenuContent.swift
+  h_1e0ba4a9f2a4b4 88-91
+apps/desktop/Sources/Porter/Views/SettingsView.swift
+  h_1e0ba4a9f2a4b4 62-71,152-171
+apps/desktop/Sources/PorterCore/Models/QuietHours.swift
+  h_1e0ba4a9f2a4b4 1-37
+apps/desktop/Tests/PorterCoreTests/QuietHoursTests.swift
+  h_1e0ba4a9f2a4b4 1-42
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "11a064512ca30200f9cadd76123b554a90936a7c",
+  "prompts": {},
+  "humans": {
+    "h_1e0ba4a9f2a4b4": {
+      "author": "Abdul Rafay <99marafay@gmail.com>"
+    }
+  }
+}
