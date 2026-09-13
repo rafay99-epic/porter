@@ -1,0 +1,104 @@
+.gitignore
+  h_1e0ba4a9f2a4b4 14-19
+apps/web/.gitignore
+  h_1e0ba4a9f2a4b4 1-24
+apps/web/README.md
+  h_1e0ba4a9f2a4b4 1-55
+apps/web/index.html
+  h_1e0ba4a9f2a4b4 1-25
+apps/web/package.json
+  h_1e0ba4a9f2a4b4 1-33
+apps/web/postcss.config.js
+  h_1e0ba4a9f2a4b4 1-6
+apps/web/public/favicon.svg
+  h_1e0ba4a9f2a4b4 1-15
+apps/web/src/App.tsx
+  h_1e0ba4a9f2a4b4 1-29
+apps/web/src/components/CopyCommand.tsx
+  h_1e0ba4a9f2a4b4 1-46
+apps/web/src/components/Glyph.tsx
+  h_1e0ba4a9f2a4b4 1-58
+apps/web/src/components/MenuBar.tsx
+  h_1e0ba4a9f2a4b4 1-104
+apps/web/src/components/ScaleToFit.tsx
+  h_1e0ba4a9f2a4b4 1-51
+apps/web/src/components/appkit/Dashboard.tsx
+  h_1e0ba4a9f2a4b4 1-107
+apps/web/src/components/appkit/MenuBarPanel.tsx
+  h_1e0ba4a9f2a4b4 1-160
+apps/web/src/components/appkit/PreviewWindow.tsx
+  h_1e0ba4a9f2a4b4 1-57
+apps/web/src/components/appkit/RulesPanel.tsx
+  h_1e0ba4a9f2a4b4 1-63
+apps/web/src/components/appkit/SettingsWindow.tsx
+  h_1e0ba4a9f2a4b4 1-116
+apps/web/src/components/appkit/StatsWindow.tsx
+  h_1e0ba4a9f2a4b4 1-79
+apps/web/src/components/appkit/Window.tsx
+  h_1e0ba4a9f2a4b4 1-36
+apps/web/src/components/brand.tsx
+  h_1e0ba4a9f2a4b4 1-89
+apps/web/src/components/editorial.tsx
+  h_1e0ba4a9f2a4b4 1-110
+apps/web/src/index.css
+  h_1e0ba4a9f2a4b4 1-123
+apps/web/src/lib/gsap.ts
+  h_1e0ba4a9f2a4b4 1-11
+apps/web/src/lib/useGsap.ts
+  h_1e0ba4a9f2a4b4 1-22
+apps/web/src/lib/useScrollStatus.ts
+  h_1e0ba4a9f2a4b4 1-41
+apps/web/src/main.tsx
+  h_1e0ba4a9f2a4b4 1-13
+apps/web/src/sections/Colophon.tsx
+  h_1e0ba4a9f2a4b4 1-94
+apps/web/src/sections/Control.tsx
+  h_1e0ba4a9f2a4b4 1-94
+apps/web/src/sections/Destinations.tsx
+  h_1e0ba4a9f2a4b4 1-73
+apps/web/src/sections/Install.tsx
+  h_1e0ba4a9f2a4b4 1-117
+apps/web/src/sections/Intake.tsx
+  h_1e0ba4a9f2a4b4 1-171
+apps/web/src/sections/Proof.tsx
+  h_1e0ba4a9f2a4b4 1-66
+apps/web/src/sections/Watch.tsx
+  h_1e0ba4a9f2a4b4 1-70
+apps/web/src/sections/WhyItWorks.tsx
+  h_1e0ba4a9f2a4b4 1-74
+apps/web/src/vite-env.d.ts
+  h_1e0ba4a9f2a4b4 1
+apps/web/tailwind.config.js
+  h_1e0ba4a9f2a4b4 1-83
+apps/web/tsconfig.json
+  h_1e0ba4a9f2a4b4 1-23
+apps/web/vite.config.ts
+  h_1e0ba4a9f2a4b4 1-19
+package-lock.json
+  h_1e0ba4a9f2a4b4 1-2627
+package.json
+  h_1e0ba4a9f2a4b4 1-21
+packages/core/package.json
+  h_1e0ba4a9f2a4b4 1-21
+packages/core/src/data.ts
+  h_1e0ba4a9f2a4b4 1-167
+packages/core/src/index.ts
+  h_1e0ba4a9f2a4b4 1-2
+packages/core/src/types.ts
+  h_1e0ba4a9f2a4b4 1-125
+packages/core/tsconfig.json
+  h_1e0ba4a9f2a4b4 1-18
+turbo.json
+  h_1e0ba4a9f2a4b4 1-24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "5f1dfb54ed734d861226d67db03ef1ca8a4963f3",
+  "prompts": {},
+  "humans": {
+    "h_1e0ba4a9f2a4b4": {
+      "author": "Abdul Rafay <99marafay@gmail.com>"
+    }
+  }
+}
