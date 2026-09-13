@@ -1,0 +1,20 @@
+apps/desktop/Sources/Porter/Services/Notifier.swift
+  h_1e0ba4a9f2a4b4 1-57
+apps/desktop/Sources/Porter/Services/PorterSettings.swift
+  h_1e0ba4a9f2a4b4 34-35,52,78,112
+apps/desktop/Sources/Porter/Services/SortCoordinator.swift
+  h_1e0ba4a9f2a4b4 77,100,259-262,299-302
+apps/desktop/Sources/Porter/Views/SettingsView.swift
+  h_1e0ba4a9f2a4b4 40-43
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "a500818cd6e2d6b6a48c0a92a029da4e19776579",
+  "prompts": {},
+  "humans": {
+    "h_1e0ba4a9f2a4b4": {
+      "author": "Abdul Rafay <99marafay@gmail.com>"
+    }
+  }
+}
