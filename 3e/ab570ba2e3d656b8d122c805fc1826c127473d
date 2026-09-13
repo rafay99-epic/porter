@@ -1,0 +1,20 @@
+apps/desktop/Sources/Porter/App/PorterApp.swift
+  h_1e0ba4a9f2a4b4 45-48
+apps/desktop/Sources/Porter/Views/Components/StatusViews.swift
+  h_1e0ba4a9f2a4b4 130-132
+apps/desktop/Sources/Porter/Views/DashboardView.swift
+  h_1e0ba4a9f2a4b4 22-23,28,44-46,52,222-237,247
+apps/desktop/Sources/Porter/Views/MenuContent.swift
+  h_1e0ba4a9f2a4b4 80-94,96
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "3eab570ba2e3d656b8d122c805fc1826c127473d",
+  "prompts": {},
+  "humans": {
+    "h_1e0ba4a9f2a4b4": {
+      "author": "Abdul Rafay <99marafay@gmail.com>"
+    }
+  }
+}
