@@ -1,0 +1,14 @@
+apps/desktop/Sources/Porter/Services/Updater.swift
+  h_1e0ba4a9f2a4b4 104,128-129,147,259-260
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "8a4069f7603280b0c687dbfe892d448eab47ded9",
+  "prompts": {},
+  "humans": {
+    "h_1e0ba4a9f2a4b4": {
+      "author": "Abdul Rafay <99marafay@gmail.com>"
+    }
+  }
+}
