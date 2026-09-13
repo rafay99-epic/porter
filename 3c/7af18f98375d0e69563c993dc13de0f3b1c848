@@ -1,0 +1,16 @@
+apps/desktop/Sources/Porter/Views/Components/RulesEditor.swift
+  h_1e0ba4a9f2a4b4 9-17,24-25,30,47-78,101,110,117-119,128-130
+apps/desktop/Sources/PorterCore/Sorting/RuleEngine.swift
+  h_1e0ba4a9f2a4b4 12-19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "3c7af18f98375d0e69563c993dc13de0f3b1c848",
+  "prompts": {},
+  "humans": {
+    "h_1e0ba4a9f2a4b4": {
+      "author": "Abdul Rafay <99marafay@gmail.com>"
+    }
+  }
+}
