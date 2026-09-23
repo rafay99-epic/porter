@@ -22,7 +22,7 @@ export const AUTHOR: Author = {
 
 export const INSTALL: InstallInfo = {
   repo: REPO,
-  brewTap: 'brew install --cask rafay99-epic/tap/porter',
+  brewTap: 'brew install --cask rafay99-epic/apps/porter',
   dmgStable: `${REPO}/releases/latest/download/Porter.dmg`,
   dmgNightly: `${REPO}/releases/latest/download/Porter-Nightly.dmg`,
   releases: `${REPO}/releases`,
