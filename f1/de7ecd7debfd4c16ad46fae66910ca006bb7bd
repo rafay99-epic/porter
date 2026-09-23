@@ -1,0 +1,23 @@
+apps/web/README.md
+  s_3e3dfec32bf217::t_22afa2c0ad9971 53-55
+apps/web/src/sections/Install.tsx
+  s_3e3dfec32bf217::t_5fc292472ca5b5 74
+packages/core/src/data.ts
+  s_3e3dfec32bf217::t_311219bbb8d393 25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "f1de7ecd7debfd4c16ad46fae66910ca006bb7bd",
+  "prompts": {},
+  "sessions": {
+    "s_3e3dfec32bf217": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "fc78b36b-49ba-4f4d-b965-573ed26d3610",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Abdul Rafay <99marafay@gmail.com>"
+    }
+  }
+}
