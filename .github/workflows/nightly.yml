@@ -12,6 +12,7 @@ on:
     paths:
       - "apps/desktop/**"
       - ".github/workflows/nightly.yml"
+      - ".github/scripts/**"
 
 permissions:
   contents: read
@@ -52,6 +53,15 @@ jobs:
           fetch-depth: 0 # version is the commit count
       - name: Compute version
         run: echo "VERSION=0.$(git rev-list --count HEAD)" >> "$GITHUB_ENV"
+      # Nightly is an auto-updating channel too, so it needs the same stable signing
+      # for TCC grants to survive its updates. Safe here: push to `nightly` runs
+      # trusted branch code (not a fork PR), so the cert secret can't be exfiltrated.
+      # Falls back to ad-hoc (with a warning) if the secrets are unset.
+      - name: Set up stable code-signing certificate
+        env:
+          MACOS_SIGN_CERT_P12: ${{ secrets.MACOS_SIGN_CERT_P12 }}
+          MACOS_SIGN_CERT_PASSWORD: ${{ secrets.MACOS_SIGN_CERT_PASSWORD }}
+        run: bash "$GITHUB_WORKSPACE/.github/scripts/setup-signing.sh"
       - name: Build app and installer
         run: |
           export PORTER_CHANNEL=nightly

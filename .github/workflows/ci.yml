@@ -11,10 +11,12 @@ on:
     paths:
       - "apps/desktop/**"
       - ".github/workflows/ci.yml"
+      - ".github/scripts/**"
   pull_request:
     paths:
       - "apps/desktop/**"
       - ".github/workflows/ci.yml"
+      - ".github/scripts/**"
 
 permissions:
   contents: read
@@ -78,6 +80,15 @@ jobs:
           fetch-depth: 0 # full history — the version is the commit count
       - name: Compute version
         run: echo "VERSION=0.$(git rev-list --count HEAD)" >> "$GITHUB_ENV"
+      # Stable self-signed signing so released builds keep the same designated
+      # requirement → users' TCC grants survive auto-updates. Release job only (push
+      # to main, trusted code) — never a PR job, where a branch could leak the secret.
+      # Falls back to ad-hoc (with a warning) if the secrets are unset.
+      - name: Set up stable code-signing certificate
+        env:
+          MACOS_SIGN_CERT_P12: ${{ secrets.MACOS_SIGN_CERT_P12 }}
+          MACOS_SIGN_CERT_PASSWORD: ${{ secrets.MACOS_SIGN_CERT_PASSWORD }}
+        run: bash "$GITHUB_WORKSPACE/.github/scripts/setup-signing.sh"
       - name: Build app and installer
         run: |
           export PORTER_VERSION="$VERSION"

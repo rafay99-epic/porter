@@ -38,6 +38,28 @@ swiftlint            # lint
 Apple Silicon, macOS 14+. The classification map and move rules are a direct port
 of the author's `bin/sort-downloads` script.
 
+### Code signing (stable identity)
+
+Builds sign **ad-hoc** by default. Ad-hoc signatures change every build, and macOS
+keys TCC grants (Full Disk Access, etc.) and the Gatekeeper identity to the
+signature — so an ad-hoc *update* looks like a brand-new app and silently drops
+those permissions. To make grants persist across updates, sign with a stable
+**self-signed** identity (no Apple account / notarization needed):
+
+```sh
+cd apps/desktop
+./Scripts/make-signing-cert.sh          # one-time: generates + imports the cert,
+                                        # prints the two CI secrets
+CODESIGN_IDENTITY="Porter Local Signing" ./build.sh
+```
+
+`build.sh` reads `CODESIGN_IDENTITY`; if the name isn't in the keychain it warns and
+falls back to ad-hoc. In CI, signing runs **only on the release jobs** (push to
+`main` / `nightly`, never a PR), driven by `.github/scripts/setup-signing.sh` and two
+repo secrets — `MACOS_SIGN_CERT_P12` (base64 of the `.p12`) and
+`MACOS_SIGN_CERT_PASSWORD`. The same cert can be reused across every app in the
+family; each distinct bundle id still gets its own designated requirement.
+
 ## License
 
 GPL-3.0 — see [LICENSE](LICENSE). © Syntax Lab Technology / Abdul Rafay
