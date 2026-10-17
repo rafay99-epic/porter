@@ -50,6 +50,7 @@ attribution anywhere — credited to Syntax Lab Technology / Abdul Rafay.
 
 ## Install links
 
-Primary CTA `brew install --cask rafay99-epic/tap/porter` requires a published
-Homebrew tap (`rafay99-epic/homebrew-tap`) with a `porter` cask. DMG links target
+Primary CTA `brew install --cask rafay99-epic/apps/porter` installs the `porter`
+cask from the `rafay99-epic/apps` tap (the `rafay99-epic/homebrew-apps` repo), which
+the release workflow bumps on every Stable release. DMG links target
 the GitHub Releases assets (`Porter.dmg` / `Porter-Nightly.dmg`).
