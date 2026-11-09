@@ -56,6 +56,19 @@ including the **xattr-stripping copy** — see below.
   release, then publishes `Porter.dmg`; `nightly.yml` (push to `nightly`) refreshes
   a single rolling `nightly` pre-release whose title carries `build <n>` (the
   updater parses it). PRs upload the DMG as an artifact instead of publishing.
+- **Signing.** Stable and Nightly DMGs are signed with the Developer ID
+  Application certificate (Syntax Labs, team `MGH5K382YN`), hardened runtime +
+  timestamp, then notarized and stapled in CI (`.github/scripts/setup-signing.sh`
+  imports the cert and exports `NOTARY_*`; `make-dmg.sh` submits, waits and
+  staples). Secrets: `MACOS_SIGN_CERT_P12`, `MACOS_SIGN_CERT_PASSWORD`,
+  `APPLE_API_KEY_P8`, `APPLE_API_KEY_ID`, `APPLE_API_ISSUER_ID`, the same values
+  as Vitals. A notary rejection fails the job, so an un-notarized build never
+  ships. `Resources/Porter.entitlements` holds the one entitlement the hardened
+  runtime needs (Apple Events, for "Mount now" via Finder). Sign the bundle once,
+  never with `--deep`. There is no ad-hoc signing: every build signs with the
+  Developer ID, and a missing identity fails the build. PR CI packages with
+  `UNSIGNED=1` (no secrets there; that DMG never ships). `./sign.sh` builds a
+  notarized DMG locally from the keys in `~/.vitals-signing`.
 - **Repo is PRIVATE** (`rafay99-epic/porter`). The in-app `Updater` therefore
   authenticates: it pulls a token from `gh auth token` and hits the Releases API +
   downloads assets via the asset API URL with `Accept: application/octet-stream` +
@@ -119,6 +132,7 @@ swiftlint              # lint (CI: --reporter github-actions-logging)
 ./build.sh             # release build → build/Porter.app  (PORTER_CHANNEL selects channel)
 ./dev.sh               # build + install "Porter Dev" next to Stable
 ./make-dmg.sh          # package the channel's DMG
+./sign.sh              # signed + notarized Nightly DMG (./sign.sh stable for Stable)
 ```
 
 ## Logging
