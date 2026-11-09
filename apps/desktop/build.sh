@@ -87,11 +87,31 @@ if [ ! -f "$ICON_CACHE" ]; then
 fi
 [ -f "$ICON_CACHE" ] && cp "$ICON_CACHE" "$APP/Contents/Resources/AppIcon.icns"
 
-# Sign ad-hoc by default; set CODESIGN_IDENTITY to a Developer ID for notarization
-# (adds hardened runtime + timestamp).
-SIGN_ID="${CODESIGN_IDENTITY:--}"
-SIGN_OPTS=(--force --sign "$SIGN_ID")
-[[ "$SIGN_ID" != "-" ]] && SIGN_OPTS+=(--options runtime --timestamp)
-echo "Signing…"
-codesign "${SIGN_OPTS[@]}" "$APP"
+# Code signing. Every build signs with the team's Developer ID Application
+# certificate: hardened runtime + secure timestamp, which notarization requires
+# (make-dmg.sh notarizes the DMG in CI). There is no ad-hoc fallback: a missing
+# identity fails the build. The Developer ID identity keeps the Full Disk Access
+# grant across updates, since the designated requirement is the Team ID.
+#
+# CODESIGN_IDENTITY overrides the identity. CODESIGN_KEYCHAIN (set by sign.sh)
+# signs from an unlocked throwaway keychain, so no keychain dialog blocks a run.
+# UNSIGNED=1 skips signing for CI's PR packaging check, whose DMG never ships.
+# Porter.app has no nested code, so one signature covers it (never --deep: it
+# would drop the entitlements). Porter.entitlements allows the Apple Event that
+# asks Finder to mount the NAS share.
+if [ "${UNSIGNED:-0}" = 1 ]; then
+  echo "UNSIGNED=1: not signing (PR packaging check only, never published)"
+else
+  SIGN_IDENTITY="${CODESIGN_IDENTITY:-Developer ID Application: Syntax Labs (Private) Limited (MGH5K382YN)}"
+  if ! security find-identity -p codesigning | grep -qF "\"$SIGN_IDENTITY\""; then
+    echo "error: \"$SIGN_IDENTITY\" is not in the keychain. Use ./sign.sh, or import ~/.vitals-signing/developer-id.p12." >&2
+    exit 1
+  fi
+  echo "Signing with $SIGN_IDENTITY (hardened runtime)"
+  KEYCHAIN_ARGS=()
+  [ -n "${CODESIGN_KEYCHAIN:-}" ] && KEYCHAIN_ARGS=(--keychain "$CODESIGN_KEYCHAIN")
+  codesign --force --options runtime --timestamp "${KEYCHAIN_ARGS[@]}" \
+    --entitlements Resources/Porter.entitlements --sign "$SIGN_IDENTITY" "$APP"
+  codesign --verify --strict --deep "$APP"
+fi
 echo "Done → $PWD/$APP"

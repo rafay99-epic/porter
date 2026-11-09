@@ -33,9 +33,11 @@ swiftlint            # lint
 ./build.sh           # release build → build/Porter.app  (PORTER_CHANNEL selects channel)
 ./dev.sh             # build + install "Porter Dev" next to Stable
 ./make-dmg.sh        # package the channel's DMG
+./sign.sh            # signed + notarized DMG (needs the Developer ID keys)
 ```
 
-Apple Silicon, macOS 14+. The classification map and move rules are a direct port
+Releases are signed with Developer ID and notarized by Apple, so the DMG opens
+without Gatekeeper warnings. Apple Silicon, macOS 14+. The classification map and move rules are a direct port
 of the author's `bin/sort-downloads` script.
 
 ## License
