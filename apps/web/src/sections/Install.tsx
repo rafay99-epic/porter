@@ -71,7 +71,7 @@ export function Install() {
                   <CopyCommand command={INSTALL.brewTap} />
                   <p className="text-[13.5px] leading-relaxed text-ink-2">
                     Installs the cask from the{' '}
-                    <span className="font-mono text-[12px] text-ink">rafay99-epic/tap</span> tap.
+                    <span className="font-mono text-[12px] text-ink">rafay99-epic/apps</span> tap.
                     Homebrew keeps it updated with the rest of your tooling.
                   </p>
                 </div>

@@ -11,10 +11,12 @@ on:
     paths:
       - "apps/desktop/**"
       - ".github/workflows/ci.yml"
+      - ".github/scripts/**"
   pull_request:
     paths:
       - "apps/desktop/**"
       - ".github/workflows/ci.yml"
+      - ".github/scripts/**"
 
 permissions:
   contents: read
@@ -56,6 +58,8 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Build app and installer
+        env:
+          UNSIGNED: "1" # PR packaging check; no signing secrets here and this DMG never ships
         run: |
           ./build.sh
           ./make-dmg.sh
@@ -78,6 +82,18 @@ jobs:
           fetch-depth: 0 # full history — the version is the commit count
       - name: Compute version
         run: echo "VERSION=0.$(git rev-list --count HEAD)" >> "$GITHUB_ENV"
+      # Developer ID signing + notarization (setup-signing.sh). Push-to-main only
+      # (this job is gated to `refs/heads/main`), so no fork PR can read the
+      # secrets. Missing secrets fail the release; there is no ad-hoc fallback.
+      - name: Set up Developer ID signing and notarization
+        working-directory: .
+        env:
+          MACOS_SIGN_CERT_P12: ${{ secrets.MACOS_SIGN_CERT_P12 }}
+          MACOS_SIGN_CERT_PASSWORD: ${{ secrets.MACOS_SIGN_CERT_PASSWORD }}
+          APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+        run: bash .github/scripts/setup-signing.sh
       - name: Build app and installer
         run: |
           export PORTER_VERSION="$VERSION"

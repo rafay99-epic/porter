@@ -27,6 +27,10 @@
 	<!-- Porter shows in the Dock (a "real", visibly-live app) AND keeps a menu-bar
 	     status item. It is NOT LSUIElement: people should see it running. Closing
 	     the main window leaves it alive in the background (menu bar + Dock). -->
+	<!-- Shown when Porter first asks Finder to mount the NAS share (an Apple Event,
+	     allowed under the hardened runtime by Porter.entitlements). -->
+	<key>NSAppleEventsUsageDescription</key>
+	<string>Porter asks Finder to mount your NAS share when you click Mount.</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>© 2026 Syntax Lab Technology. Licensed under GPL-3.0.</string>
 	<key>PorterChannel</key>
