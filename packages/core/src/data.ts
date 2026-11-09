@@ -24,7 +24,9 @@ export const INSTALL: InstallInfo = {
   repo: REPO,
   brewTap: 'brew install --cask rafay99-epic/apps/porter',
   dmgStable: `${REPO}/releases/latest/download/Porter.dmg`,
-  dmgNightly: `${REPO}/releases/latest/download/Porter-Nightly.dmg`,
+  // Nightly is a pre-release on the rolling `nightly` tag; /latest/ only ever
+  // resolves to the newest Stable release, so it must name the tag.
+  dmgNightly: `${REPO}/releases/download/nightly/Porter-Nightly.dmg`,
   releases: `${REPO}/releases`,
   requirement: 'Apple Silicon · macOS 14 Sonoma or later',
 }
